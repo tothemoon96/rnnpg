@@ -36,3 +36,9 @@ first-sentence-generator/first-sent
 rnnpg/rnnpg
 rnnpg-decoder/RNN_Poem_Generation_10_Decoder_KenLMM
 rnnpg-generator/rnnpg-generator
+
+# BLEU2
+BLEU2-final
+
+# MISC
+MISC
