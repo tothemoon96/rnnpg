@@ -3,7 +3,7 @@ OUT_EXEC = first-sent
 OBJS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 
 CC = g++
-CPPFLAGS = -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pipe -DKENLM_MAX_ORDER=6
+CPPFLAGS = -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pipe -DKENLM_MAX_ORDER=6 -DDEBUG -g
 
 INCLUDES = -I/home/tothemoon/rnnpg/kenlm
 LDFLAGS = -L/home/tothemoon/rnnpg/kenlm/lib -lkenlm
