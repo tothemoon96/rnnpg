@@ -1,4 +1,5 @@
 INSTALL.sh
+Makefile
 README.md
 UNINSTALL.sh
 experiments/generation.sh
@@ -8,6 +9,7 @@ first-sentence-generator/Constraints.h
 first-sentence-generator/FirstSentenceGenerator.cpp
 first-sentence-generator/FirstSentenceGenerator.h
 first-sentence-generator/KenLMM.h
+first-sentence-generator/Makefile
 first-sentence-generator/TonalPattern.h
 first-sentence-generator/ToneRhythm.cpp
 first-sentence-generator/ToneRhythm.h
@@ -44,6 +46,7 @@ rand-keywords/run.sh
 rnnpg-decoder/Decoder.cpp
 rnnpg-decoder/Decoder.h
 rnnpg-decoder/KenLMM.h
+rnnpg-decoder/Makefile
 rnnpg-decoder/QuatrainPositionProb.h
 rnnpg-decoder/RNNPG.cpp
 rnnpg-decoder/RNNPG.h
@@ -64,6 +67,7 @@ rnnpg-generator/Constraints.h
 rnnpg-generator/Decoder.cpp
 rnnpg-generator/Decoder.h
 rnnpg-generator/KenLMM.h
+rnnpg-generator/Makefile
 rnnpg-generator/QuatrainPositionProb.h
 rnnpg-generator/RNNPG.cpp
 rnnpg-generator/RNNPG.h
@@ -116,6 +120,8 @@ rnnpg/0.00625.log
 rnnpg/Config.h
 rnnpg/Decoder.cpp
 rnnpg/Decoder.h
+rnnpg/Makefile
+rnnpg/Makefile
 rnnpg/RNNPG.cpp
 rnnpg/RNNPG.h
 rnnpg/StringBuffer.cpp

@@ -1,11 +1,16 @@
-all:
-	$(MAKE) -C rnnpg
-	$(MAKE) -C rnnpg-decoder
-	$(MAKE) -C first-sentence-generator
-	$(MAKE) -C rnnpg-generator
+MODULES := rnnpg rnnpg-decoder first-sentence-generator rnnpg-generator
+
+debug :
+	@for subdir in $(MODULES);\
+		do $(MAKE) -C $$subdir DEBUGFLAGS=1;\
+	done
+
+release:
+	@for subdir in $(MODULES);\
+		do $(MAKE) -C $$subdir;\
+	done
 
 clean:
-	$(MAKE) -C rnnpg clean
-	$(MAKE) -C rnnpg-decoder clean
-	$(MAKE) -C first-sentence-generator clean
-	$(MAKE) -C rnnpg-generator clean
+	@for subdir in $(MODULES);\
+		do $(MAKE) -C $$subdir clean;\
+	done

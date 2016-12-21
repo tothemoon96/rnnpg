@@ -1,15 +1,23 @@
 # change the target if you need
-OUT_EXEC = rnnpg-generator
-OBJS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUT_EXEC := rnnpg-generator
+OBJS := $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 
-CC = g++
-CPPFLAGS = -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pipe -DKENLM_MAX_ORDER=6 -DDEBUG -g
+CC := g++
+CPPFLAGS := -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pipe -DKENLM_MAX_ORDER=6
 
-INCLUDES = -I/home/tothemoon/Project/rnnpg/kenlm
-LDFLAGS = -L/home/tothemoon/Project/rnnpg/kenlm/lib -lkenlm
+ifdef DEBUGFLAGS
+	ifeq ($(DEBUGFLAGS),1)
+		ifeq "$(origin DEBUGFLAGS)" "command line"
+			CPPFLAGS += -g3 -gdwarf-2 -DDEBUG
+		endif
+	endif
+endif
+
+INCLUDES := -I$(KENLM_PATH)
+LDFLAGS := -L$(KENLM_PATH)/lib -lkenlm
 
 all : $(OUT_EXEC)
-	rm *.o
+#	rm *.o
 
 $(OUT_EXEC) : $(OBJS)
 	$(CC) -o $@ $^ $(INCLUDES) $(LDFLAGS)
@@ -20,4 +28,3 @@ $(OUT_EXEC) : $(OBJS)
 clean:
 	rm -f *.o
 	rm -f $(OUT_EXEC)
-

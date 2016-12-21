@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.2.0, 2016-12-20T05:18:22. -->
+<!-- Written by QtCreator 4.2.0, 2016-12-21T01:52:47. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -71,11 +71,9 @@
     <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/tothemoon/Project/rnnpg/rnnpg</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
-      <valuelist type="QVariantList" key="GenericProjectManager.GenericMakeStep.BuildTargets">
-       <value type="QString">all</value>
-      </valuelist>
+      <valuelist type="QVariantList" key="GenericProjectManager.GenericMakeStep.BuildTargets"/>
       <value type="bool" key="GenericProjectManager.GenericMakeStep.Clean">false</value>
-      <value type="QString" key="GenericProjectManager.GenericMakeStep.MakeArguments">-j4</value>
+      <value type="QString" key="GenericProjectManager.GenericMakeStep.MakeArguments">-j4 debug</value>
       <value type="QString" key="GenericProjectManager.GenericMakeStep.MakeCommand"></value>
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Make</value>
@@ -108,7 +106,7 @@
     <value type="int" key="ProjectExplorer.BuildConfiguration.BuildStepListCount">2</value>
     <value type="bool" key="ProjectExplorer.BuildConfiguration.ClearSystemEnvironment">false</value>
     <valuelist type="QVariantList" key="ProjectExplorer.BuildConfiguration.UserEnvironmentChanges">
-     <value type="QString">LD_LIBRARY_PATH=/home/tothemoon/Project/rnnpg/kenlm/lib</value>
+     <value type="QString">KENLM_PATH=/home/tothemoon/Project/rnnpg/kenlm</value>
     </valuelist>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Default</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Default</value>
