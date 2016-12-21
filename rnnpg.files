@@ -1,7 +1,6 @@
 INSTALL.sh
 Makefile
 README.md
-UNINSTALL.sh
 experiments/generation.sh
 experiments/ppl.sh
 first-sentence-generator/AncChar.h
