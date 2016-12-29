@@ -166,7 +166,7 @@ private:
 
 	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
 	neuron *hiddenNeu;//对应于RGM的隐含层r_j
-	neuron *outNeu;
+	neuron *outNeu;//前V个神经元表示的是P(word|word_class,context)，后面classSize个神经元表示的是P(word_class,context)
 	//hiddenInSyn的存储结构
 	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
 	//h|								|					|				    |

@@ -1726,7 +1726,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 				flushNet();
 		}
 
-		words.push_back("</s>");	// during generation, we DO care about the End-of-Sentence
+		words.push_back("</s>");	// during generation, we DO care about the End-of-Sentence，注意在这里添加了一个结尾的符号，因此实际上一个句子的长度是words.size() - 1
 		int lastWord = 0, curWord = -1, wdPos;
 		//wdPos是当前正在处理的词的下标，lastWord指的诗上一个处理的词对应的词的编号，curWord指的是当前正在处理的词对应的词的编号
 		for(wdPos = 0; wdPos < (int)words.size(); wdPos ++)
