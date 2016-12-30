@@ -633,7 +633,7 @@ void RNNPG::assignClassLabel()
  * @param lastWord 上一个词在词汇表中的ID
  * @param curWord 当前正在生成的词在词汇表中的ID
  * @param wordPos 当前正在处理一句诗里的第几个词
- * @param mapSyn RCM中的M矩阵
+ * @param mapSyn RCM中的U_j矩阵
  */
 void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 {
@@ -661,6 +661,7 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 	matrixXvector(outNeu, hiddenNeu, outHiddenSyn, hiddenSize, V, V + classSize, 0, hiddenSize, 0);
 
 	if(directError)
+		//使用RCM直接去预测词类
 		// 1. condition layer (in the input layer) to the output layer -- for classes
 		matrixXvector(outNeu, inNeu + V, outConditionDSyn, hiddenSize, V, V + classSize, 0, hiddenSize, 0);
 
@@ -684,6 +685,7 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 	matrixXvector(outNeu, hiddenNeu, outHiddenSyn, hiddenSize, classStart[curClassIndex], classEnd[curClassIndex], 0, hiddenSize, 0);
 
 	if(directError)
+		//使用RCM预测词类中的词
 		// 1. condition layer (in the input layer) to the output layer -- for words
 		matrixXvector(outNeu, inNeu + V, outConditionDSyn, hiddenSize, classStart[curClassIndex], classEnd[curClassIndex], 0, hiddenSize, 0);
 
@@ -989,6 +991,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 {
 	double beta2 = alpha * beta;
 	int curClassIndex = voc_arr[curWord].classIndex, i = 0, j = 0, V = vocab.getVocabSize(), N = 0, offset = 0;
+	//误差传递到softmax激活之前的线性单元$-\delta ^{(softmax)}=y^{(label)}-a^{(softmax)}$
 	// error at output layer. 1. error on words
 	for(i = classStart[curClassIndex]; i < classEnd[curClassIndex]; i ++)
 		outNeu[i].er = 0 - outNeu[i].ac;
@@ -1001,7 +1004,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 
 	clearNeurons(hiddenNeu, hiddenSize, 2);
 
-	// error backpropagation to hidden layer
+	// error backpropagation to hidden layer,对应于$-Y^T\delta ^{(softmax)}$
 	// 1. error from words to hidden
 	matrixXvector(hiddenNeu, outNeu, outHiddenSyn, hiddenSize, classStart[curClassIndex], classEnd[curClassIndex], 0, hiddenSize, 1);
 	// 2. error from classes to hidden
@@ -1009,6 +1012,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 
 	if(directError)
 	{
+		//使用RCM生成，此处将误差直接传导到u_i^j上
 		// bufOutConditionNeu
 		clearNeurons(bufOutConditionNeu + (wordPos * hiddenSize), hiddenSize, 2);
 		// error back propagate to conditionNeu
@@ -1020,22 +1024,25 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 
 	// updating the matrix outHiddenSyn, since we already have the error at output layer and the activation in the hidden layer
 	// we update the weight per word rather than per sentence for faster increase in likelihood. Perhaps it will be modified to per sentence update later
-	// update submatrix of words to hidden layer
+	// $Y=Y-\alpha\bigtriangledown_YL=Y-\alpha\cdot\delta ^{(softmax)}r_j^T$
+	// update submatrix of words to hidden layer,更新对应于相应类别的词的Y矩阵
 	offset = classStart[curClassIndex] * hiddenSize;
 	for(i = classStart[curClassIndex]; i < classEnd[curClassIndex]; i ++)
 	{
 		if(wordCounter % 10 == 0)
+			//每学习10个字正则化一次
 			for(j = 0; j < hiddenSize; j ++) outHiddenSyn[offset + j].weight += alpha * outNeu[i].er * hiddenNeu[j].ac - beta2*outHiddenSyn[offset + j].weight;
 		else
 			for(j = 0; j < hiddenSize; j ++) outHiddenSyn[offset + j].weight += alpha * outNeu[i].er * hiddenNeu[j].ac;
 		offset += hiddenSize;
 	}
-	// update submatrix of classes to hidden layer
+	// update submatrix of classes to hidden layer，更新相应类别的Y矩阵
 	N = V + classSize;
 	offset = V * hiddenSize;
 	for(i = V; i < N; i ++)
 	{
 		if(wordCounter % 10 == 0)
+			//每学习10个字正则化一次
 			for(j = 0; j < hiddenSize; j ++) outHiddenSyn[offset + j].weight += alpha * outNeu[i].er * hiddenNeu[j].ac - beta2*outHiddenSyn[offset + j].weight;
 		else
 			for(j = 0; j < hiddenSize; j ++) outHiddenSyn[offset + j].weight += alpha * outNeu[i].er * hiddenNeu[j].ac;
@@ -2650,11 +2657,11 @@ void RNNPG::showParameters()
  * @param srcvec 源向量
  * @param srcmatrix 源矩阵
  * @param matrix_width 矩阵的列数
- * @param from 目标向量的开始维度
- * @param to 目标向量的结束维度
- * @param from2 源向量的开始维度
- * @param to2 源向量的结束维度
- * @param type 选择乘法的类型，0代表进行前向传播的乘法，1代表进行反向传播的乘法
+ * @param from 正向传播中目标向量的开始维度，反向传播中源向量的开始维度
+ * @param to 正向传播中目标向量的结束维度，反向传播中源向量的结束维度
+ * @param from2 正向传播中源向量的开始维度，反向传播中目标向量的开始维度
+ * @param to2 正向传播中源向量的结束维度，反向传播中目标向量的结束维度
+ * @param type 选择乘法的类型，0代表进行前向传播的乘法，1代表进行反向传播的乘法，在反向传播的过程中自带转置效果
  */
 void RNNPG::matrixXvector(struct neuron *dest, struct neuron *srcvec, struct synapse *srcmatrix, int matrix_width, int from, int to, int from2, int to2, int type)
 {

@@ -160,7 +160,7 @@ private:
 	neuron *cmbNeu;		// previous history representation and the current representation，对应RCM中的\begin{bmatrix}h_{i-1}\\v_i\end{bmatrix}
 	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j
 	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j
-	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的U_i^j
+	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的u_i^j
 
 	synapse *senweSyn;		// the word embedding matrix in sentence model. This can be modified during training. We can inilizate it with word2vec word embedding, or just randomly
 
@@ -246,7 +246,7 @@ private:
 	//|							   |
 	//|							   |
 	synapse *outConditionDSyn;
-	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly
+	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly,u_i^j的缓存
 
 	// for BPTT of recurrent context model
 	bool isLastSentOfPoem;
