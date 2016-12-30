@@ -220,7 +220,8 @@ private:
 	neuron* bpttConditionNeu;
 
 	// for directErr propagate to input layer
-	//outConditionDSyn的存储结构，和outHiddenSyn相似，只是不考虑RGM的作用了
+	// outConditionDSyn的存储结构，和outHiddenSyn相似，只是不考虑RGM的作用了
+	// 这里用RCM直接生成j+1位置的词$y_{j+1}=outConditionDSyn*u_i^j$
 	//|----------hiddenSize--------|
 	//|							   |
 	//|							   |
@@ -246,7 +247,7 @@ private:
 	//|							   |
 	//|							   |
 	synapse *outConditionDSyn;
-	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly,u_i^j的缓存
+	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly,用于将误差直接传导到u_i^j上
 
 	// for BPTT of recurrent context model
 	bool isLastSentOfPoem;

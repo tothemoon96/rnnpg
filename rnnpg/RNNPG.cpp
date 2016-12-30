@@ -987,6 +987,14 @@ void RNNPG::learnSentBPTT(int senLen)
 		}
 }
 
+/**
+ * @brief
+ *
+ * @param lastWord 上一个词对应于词表中的ID
+ * @param curWord 当前词对应于词表中的ID
+ * @param wordPos 正在处理的一个词在一句诗里的位置
+ * @param senLen 诗句的长度，不包含结尾的定界符"</s>"
+ */
 void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 {
 	double beta2 = alpha * beta;
@@ -1078,11 +1086,12 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 		}
 	}
 
-	// this is for back propagation through time
+	// this is for back propagation through time，开始BPTT过程了
 	bpttHistory[wordPos] = lastWord;	// store the last word
-	memcpy(bpttHiddenNeu + (wordPos * hiddenSize), hiddenNeu, sizeof(neuron)*hiddenSize);	// store the hidden layer
-	memcpy(bpttInHiddenNeu + (wordPos * hiddenSize), inNeu + (V + hiddenSize), sizeof(neuron)*hiddenSize);	// store the hidden units in input layer (previous hidden layer)
-	memcpy(bpttConditionNeu + (wordPos * hiddenSize), inNeu + V, sizeof(neuron)*hiddenSize);	// store the condition units in input layer
+	memcpy(bpttHiddenNeu + (wordPos * hiddenSize), hiddenNeu, sizeof(neuron)*hiddenSize);	// store the hidden layer，将r_j放进了bpttHiddenNeu + (wordPos * hiddenSize)
+	memcpy(bpttInHiddenNeu + (wordPos * hiddenSize), inNeu + (V + hiddenSize), sizeof(neuron)*hiddenSize);	// store the hidden units in input layer (previous hidden layer),将r_{j-1}放进了bpttInHiddenNeu + (wordPos * hiddenSize)
+	memcpy(bpttConditionNeu + (wordPos * hiddenSize), inNeu + V, sizeof(neuron)*hiddenSize);	// store the condition units in input layer，将u_i^j放进了bpttConditionNeu + (wordPos * hiddenSize)
+	// 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
 	if(curWord != 0)
 		return;
 	// if this is the end of sentence, then let's do it
