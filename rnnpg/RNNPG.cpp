@@ -703,6 +703,11 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 		outNeu[i].ac /= sum;
 }
 
+/**
+ * @brief
+ * 将误差传递到RCM的h_i和CSM中
+ * @param senLen 句子的长度
+ */
 void RNNPG::learnSent(int senLen)
 {
 	double beta2 = alpha * beta;
@@ -989,7 +994,8 @@ void RNNPG::learnSentBPTT(int senLen)
 
 /**
  * @brief
- *
+ * 学习整个网络的过程
+ * 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
  * @param lastWord 上一个词对应于词表中的ID
  * @param curWord 当前词对应于词表中的ID
  * @param wordPos 正在处理的一个词在一句诗里的位置
@@ -1087,15 +1093,15 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 	}
 
 	// this is for back propagation through time，开始BPTT过程了
-	bpttHistory[wordPos] = lastWord;	// store the last word
+	bpttHistory[wordPos] = lastWord;	// store the last word,在wordPos处存储上一个词的ID
 	memcpy(bpttHiddenNeu + (wordPos * hiddenSize), hiddenNeu, sizeof(neuron)*hiddenSize);	// store the hidden layer，将r_j放进了bpttHiddenNeu + (wordPos * hiddenSize)
 	memcpy(bpttInHiddenNeu + (wordPos * hiddenSize), inNeu + (V + hiddenSize), sizeof(neuron)*hiddenSize);	// store the hidden units in input layer (previous hidden layer),将r_{j-1}放进了bpttInHiddenNeu + (wordPos * hiddenSize)
 	memcpy(bpttConditionNeu + (wordPos * hiddenSize), inNeu + V, sizeof(neuron)*hiddenSize);	// store the condition units in input layer，将u_i^j放进了bpttConditionNeu + (wordPos * hiddenSize)
 	// 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
 	if(curWord != 0)
 		return;
-	// if this is the end of sentence, then let's do it
-	int lword = -1, layer1Size = V + hiddenSize + hiddenSize;
+	// if this is the end of sentence, then let's do it，此时wordPos=诗句的长度+1
+	int lword = -1, layer1Size = V + hiddenSize + hiddenSize;//lword表示正在处理的词的上一个词的ID
 	synapse **mapSyn = NULL;
 	mapSyn = senLen == 5 ? map5Syn : map7Syn;
 	for(int step = wordPos; step >= 0; step --)
@@ -1103,35 +1109,41 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 		// take care of vocabulary and recurrent part in input layer first
 		// bpttHiddenInSyn[]
 		for(i = 0; i < hiddenSize; i ++)
+			//sigmoid的导数
 			hiddenNeu[i].er *= hiddenNeu[i].ac * (1 - hiddenNeu[i].ac);
 		lword = bpttHistory[step];
-		// accumulate deviations for input matrix, X
+		// X->accumulate deviations for input matrix, X，只更新lword
 		for(i = 0; i < hiddenSize; i ++)
 			bpttHiddenInSyn[i * layer1Size + lword].weight += alpha * hiddenNeu[i].er;
 
+		// 更新r_{j-1}
 		clearNeurons(inNeu + (V+hiddenSize), hiddenSize, 2);
 		matrixXvector(inNeu, hiddenNeu, hiddenInSyn, layer1Size, 0, hiddenSize, V + hiddenSize, layer1Size, 1);
-		// accumulate deviations for hidden matrix, R
+
+		// R->accumulate deviations for hidden matrix, R
 		for(i = 0; i < hiddenSize; i ++)
 			for(j = V + hiddenSize; j < layer1Size; j ++)
 				bpttHiddenInSyn[i*layer1Size + j].weight += alpha * hiddenNeu[i].er * inNeu[j].ac;
 
 		// now we take care the condition part in the input layer
-		// back propagate the error to condition part
+		// 更新u_i^j，back propagate the error to condition part
 		clearNeurons(inNeu + V, hiddenSize, 2);
 		matrixXvector(inNeu, hiddenNeu, hiddenInSyn, layer1Size, 0, hiddenSize, V, V + hiddenSize, 1);
-		// accumulate deviations for condition matrix, H
+
+		// H->accumulate deviations for condition matrix, H
 		N = V + hiddenSize;
 		for(i = 0; i < hiddenSize; i ++)
 			for(j = V; j < N; j ++)
 				bpttHiddenInSyn[i*layer1Size + j].weight += alpha * hiddenNeu[i].er * inNeu[j].ac;
 
+		// 只使用RCM
 		if(directError)
 		{
 			for(i = 0; i < hiddenSize; i ++)
 				inNeu[V + i].er += bufOutConditionNeu[step * hiddenSize + i].er;
 		}
 
+		// 计算u_i^j的激活函数，将误差传导到U_j \cdot h_i上
 		for(i = V; i < N; i ++)
 			inNeu[i].er *= inNeu[i].ac * (1 - inNeu[i].ac);
 
@@ -1142,6 +1154,8 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 		matrixXvector(hisNeu, inNeu + V, mapSyn[step], hiddenSize, 0, hiddenSize, 0, hiddenSize, 1);
 
 		// acumulate deviations for map matrix
+		// 每10个字做一次正则化
+		// 训练U_j矩阵
 		if(wordCounter % 10 == 0)
 		{
 			for(i = 0; i < hiddenSize; i ++)
@@ -1156,8 +1170,10 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 		}
 
 		if(perSentUpdate)
+			// 训练RCM,和CSM
 			learnSent(senLen);
 
+		// 当已经到了第一个词的时候，结束该循环
 		if(step == 0) continue;
 		// propagate error to previous layer
 		for(i = 0; i < hiddenSize; i ++)
@@ -1180,6 +1196,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 	{
 //		if(wordCounter % 10 == 0)
 //		{
+			//用于更新Word Embedding矩阵X
 			for(j = 0; j <= wordPos; j ++)
 			{
 				lword = bpttHistory[j];
@@ -1199,6 +1216,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 
 //		if(wordCounter % 10 == 0)
 //		{
+			//用于更新H矩阵
 			N = V + hiddenSize;
 			for(j = V; j < N; j ++)
 			{
@@ -1218,6 +1236,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 
 //		if(wordCounter % 10 == 0)
 //		{
+			//用于更新R矩阵
 			for(j = V + hiddenSize; j < layer1Size; j ++)
 			{
 				hiddenInSyn[i*layer1Size + j].weight += bpttHiddenInSyn[i*layer1Size + j].weight - hiddenInSyn[i*layer1Size + j].weight * beta2;

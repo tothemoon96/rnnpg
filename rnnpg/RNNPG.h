@@ -213,11 +213,24 @@ private:
 	int *classEnd;//一个int数组，数组中的每个元素对应于V中该类词结束的编号+1
 
 	// for back propagation
-	int *bpttHistory;
-	neuron* bpttHiddenNeu;
-	neuron* bpttInHiddenNeu;
-	synapse *bpttHiddenInSyn;
-	neuron* bpttConditionNeu;
+	int *bpttHistory;//在wordPos处存储上一个词的ID
+	neuron* bpttHiddenNeu;//将r_j放进了bpttHiddenNeu + (wordPos * hiddenSize)
+	neuron* bpttInHiddenNeu;//将r_{j-1}放进了bpttInHiddenNeu + (wordPos * hiddenSize)
+	// bpttHiddenInSyn的存储结构
+	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
+	//h|								|					|				    |
+	//i|								|					|				    |
+	//i|								|					|				    |
+	//d|								|					|				    |
+	//d|								|					|				    |
+	//e|								|					|				    |
+	//n|								|					|				    |
+	//S|								|					|				    |
+	//i|								|					|				    |
+	//z|								|					|				    |
+	//e|								|					|				    |
+	synapse *bpttHiddenInSyn;//存储BPTT过程中沿着时间传递的hiddenInSyn的累积误差，用于更新hiddenInSyn
+	neuron* bpttConditionNeu;//将u_i^j放进了bpttConditionNeu + (wordPos * hiddenSize)
 
 	// for directErr propagate to input layer
 	// outConditionDSyn的存储结构，和outHiddenSyn相似，只是不考虑RGM的作用了
@@ -284,7 +297,7 @@ private:
 	double consynMax;
 	double consynOffset;
 	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
-	bool perSentUpdate;
+	bool perSentUpdate;//如果为1，在训练RGM的同时，每读入一句话都会训练RCM和CSM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup
