@@ -712,10 +712,13 @@ void RNNPG::learnSent(int senLen)
 {
 	double beta2 = alpha * beta;
 	int i, j, N = hiddenSize + hiddenSize;
+	//将误差传递到$M\begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$上
 	for(i = 0; i < hiddenSize; i ++)
 		hisNeu[i].er *= hisNeu[i].ac * (1 - hisNeu[i].ac);
+	//清空h_{i-1}的error
 	clearNeurons(cmbNeu + hiddenSize, hiddenSize, 2);
-	// back propagate error from the history representation to sentence top layer (the final representation of the sentence)
+
+	// back propagate error from the history representation to sentence top layer (the final representation of the sentence)，反向传播到v_i中去
 	matrixXvector(cmbNeu, hisNeu, compressSyn, hiddenSize + hiddenSize, 0, hiddenSize, hiddenSize, hiddenSize + hiddenSize, 1);
 	// update compress matrix
 //	if(wordCounter % 10 == 0)

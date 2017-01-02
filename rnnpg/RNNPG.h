@@ -155,9 +155,21 @@ private:
 	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层
 	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元
 	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元
+	// compressSyn的存储结构
+	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
+	//h|																	|
+	//i|																	|
+	//d|																	|
+	//d|																	|
+	//e|																	|
+	//n|																	|
+	//S|																	|
+	//i|																	|
+	//z|																	|
+	//e|																	|
 	synapse *compressSyn;		// used to compress history representation and the current representation. Or generate new history_i using history_i-1 and sen_repr_i，对应于RCM中的M矩阵
 	neuron *hisNeu;		// history representation，对应RCM中的h_i
-	neuron *cmbNeu;		// previous history representation and the current representation，对应RCM中的\begin{bmatrix}h_{i-1}\\v_i\end{bmatrix}
+	neuron *cmbNeu;		// previous history representation and the current representation，对应RCM中的\begin{bmatrix}h_{i-1}\\v_i\end{bmatrix},注意这个向量的排列顺序刚好和论文里面是反着的
 	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j
 	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j
 	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的u_i^j
