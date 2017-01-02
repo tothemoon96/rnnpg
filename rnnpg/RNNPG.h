@@ -276,7 +276,7 @@ private:
 
 	// for BPTT of recurrent context model
 	bool isLastSentOfPoem;
-	bool conbptt;
+	bool conbptt;//如果conbptt为1，perSentUpdate为0，那么读入一整首诗之后，才会使用BPTT来训练CSM和RCM
 	int contextBPTTSentNum;
 	neuron* conBPTTHis;
 	neuron* conBPTTCmbHis;
@@ -309,7 +309,7 @@ private:
 	double consynMax;
 	double consynOffset;
 	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
-	bool perSentUpdate;//如果为1，在训练RGM的同时，每读入一句话都会训练RCM和CSM
+	bool perSentUpdate;//如果为1，在训练RGM的同时，每读入一句话都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup

@@ -705,11 +705,12 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 
 /**
  * @brief
- * 将误差传递到RCM的h_i和CSM中
+ * 将误差传递到RCM的h_i和CSM中，这里并没有使用BPTT来训练RCM
  * @param senLen 句子的长度
  */
 void RNNPG::learnSent(int senLen)
 {
+	//反向传播RCM
 	double beta2 = alpha * beta;
 	int i, j, N = hiddenSize + hiddenSize;
 	//将误差传递到$M\begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$上
@@ -723,6 +724,7 @@ void RNNPG::learnSent(int senLen)
 	// update compress matrix
 //	if(wordCounter % 10 == 0)
 //	{
+		//更新M矩阵
 		for(i = 0; i < hiddenSize; i ++)
 			for(j = 0; j < N; j ++)
 				compressSyn[i * N + j].weight += alpha * hisNeu[i].er * cmbNeu[j].ac - compressSyn[i * N + j].weight * beta2;
@@ -734,10 +736,13 @@ void RNNPG::learnSent(int senLen)
 //				compressSyn[i * N + j].weight += alpha * hisNeu[i].er * cmbNeu[j].ac;
 //	}
 
+	// 反向传播CSM
 	// error propagate in sentence model
 	neuron **senNeu = senLen == 5 ? sen5Neu : sen7Neu;
 	int SEN_HIGHT = senLen == 5 ? SEN5_HIGHT : SEN7_HIGHT;
+	//unitNumNx卷积后每一层的的单元数目
 	int unitNum = 1, unitNumNx = 1, a = -1, b = -1;
+	// 将误差传递到CSM的顶层里面
 	for(i = 0; i < hiddenSize; i ++)
 		senNeu[SEN_HIGHT - 1][i].er = cmbNeu[hiddenSize + i].er;
 	for(i = SEN_HIGHT - 2; i >= 0; i --)
@@ -745,11 +750,12 @@ void RNNPG::learnSent(int senLen)
 		unitNumNx = unitNum + (conSeq[i] - 1);
 		int offset = 0, offsetNx = 0, offsetCon = 0;
 		// for readability, I just compute the deviation seperately
-		for(a = 0; a < hiddenSize; a ++) for(b = 0; b < unitNum; b ++)
-		{
-			offset = a * unitNum;
-			senNeu[i + 1][offset + b].er *= senNeu[i + 1][offset + b].ac * (1 - senNeu[i + 1][offset + b].ac);
-		}
+		for(a = 0; a < hiddenSize; a ++)
+			for(b = 0; b < unitNum; b ++)
+			{
+				offset = a * unitNum;
+				senNeu[i + 1][offset + b].er *= senNeu[i + 1][offset + b].ac * (1 - senNeu[i + 1][offset + b].ac);
+			}
 
 		// compute the back propagate error
 		if(i != 0 || !fixSentenceModelFirstLayer)
@@ -831,6 +837,11 @@ void RNNPG::learnSent(int senLen)
 	}
 }
 
+/**
+ * @brief
+ * 读取完了一整首诗之后，使用BPTT来训练RCM和CSM
+ * @param senLen 句子的长度
+ */
 void RNNPG::learnSentBPTT(int senLen)
 {
 	/*
