@@ -740,7 +740,7 @@ void RNNPG::learnSent(int senLen)
 	// error propagate in sentence model
 	neuron **senNeu = senLen == 5 ? sen5Neu : sen7Neu;
 	int SEN_HIGHT = senLen == 5 ? SEN5_HIGHT : SEN7_HIGHT;
-	//unitNumNx卷积后每一层的的单元数目
+	//unitNumNx上一层卷积后的单元数目，unitNum是下一层卷积后的单元数目
 	int unitNum = 1, unitNumNx = 1, a = -1, b = -1;
 	// 将误差传递到CSM的顶层里面
 	for(i = 0; i < hiddenSize; i ++)
@@ -750,6 +750,7 @@ void RNNPG::learnSent(int senLen)
 		unitNumNx = unitNum + (conSeq[i] - 1);
 		int offset = 0, offsetNx = 0, offsetCon = 0;
 		// for readability, I just compute the deviation seperately
+		// 经过激活函数，将误差传递到$\sum_{i=1}^nT^l_{:,j+i-1} \odot C^{l,n}_{:,i}$上
 		for(a = 0; a < hiddenSize; a ++)
 			for(b = 0; b < unitNum; b ++)
 			{
@@ -758,8 +759,10 @@ void RNNPG::learnSent(int senLen)
 			}
 
 		// compute the back propagate error
+		// 如果没有到第一层并且第一层不是固定的大小
 		if(i != 0 || !fixSentenceModelFirstLayer)
 		{
+			//将误差传递到第i层卷积层
 			for(a = 0; a < hiddenSize; a ++)
 			{
 				offset = a * unitNum;
@@ -771,6 +774,7 @@ void RNNPG::learnSent(int senLen)
 						senNeu[i][offsetNx + b + j].er += senNeu[i + 1][offset + b].er * conSyn[i][offsetCon + j].weight;
 				}
 			}
+			//限制以下误差的范围，防止梯度爆炸
 			for(a = 0; a < hiddenSize; a ++)
 			{
 				offsetNx = a * unitNumNx;
@@ -783,6 +787,7 @@ void RNNPG::learnSent(int senLen)
 			}
 		}
 
+		// 更新卷积核
 		// update the matrix, at this point we do NOT consider the L2 normalization term
 		for(a = 0; a < hiddenSize; a ++)
 		{
@@ -808,6 +813,7 @@ void RNNPG::learnSent(int senLen)
 		unitNum = unitNumNx;
 	}
 	// cout << unitNumNx << endl;
+	// 第一层的大小应该和句子的长度是一样的
 	assert(unitNumNx == senLen);
 
 	if(fixSentenceModelFirstLayer)
