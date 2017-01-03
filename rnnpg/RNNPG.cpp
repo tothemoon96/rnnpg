@@ -705,7 +705,7 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 
 /**
  * @brief
- * 将误差传递到RCM的h_i和CSM中，这里并没有使用BPTT来训练RCM
+ * 将误差传递到RCM和CSM中，这里并没有使用BPTT来训练RCM
  * @param senLen 句子的长度
  */
 void RNNPG::learnSent(int senLen)
@@ -716,7 +716,7 @@ void RNNPG::learnSent(int senLen)
 	//将误差传递到$M\begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$上
 	for(i = 0; i < hiddenSize; i ++)
 		hisNeu[i].er *= hisNeu[i].ac * (1 - hisNeu[i].ac);
-	//清空h_{i-1}的error
+	//清空v_i的error
 	clearNeurons(cmbNeu + hiddenSize, hiddenSize, 2);
 
 	// back propagate error from the history representation to sentence top layer (the final representation of the sentence)，反向传播到v_i中去
@@ -759,7 +759,7 @@ void RNNPG::learnSent(int senLen)
 			}
 
 		// compute the back propagate error
-		// 如果！（到第一层并且第一层是固定的大小）
+		// 如果！（到第一层并且不在更新CSM的时候更新Word embedding矩阵）
 		if(i != 0 || !fixSentenceModelFirstLayer)
 		{
 			//将误差传递到第i层卷积层
@@ -816,7 +816,7 @@ void RNNPG::learnSent(int senLen)
 	// 第一层的大小应该和句子的长度是一样的
 	assert(unitNumNx == senLen);
 
-	//如果到了第一层并且第一层是固定的长度，就直接返回
+	//如果到了第一层并且不在更新CSM的时候更新Word embedding矩阵，就直接返回
 	if(fixSentenceModelFirstLayer)
 		return;
 	int V = vocab.getVocabSize();
@@ -828,7 +828,7 @@ void RNNPG::learnSent(int senLen)
 		//word是第i个位置的词的id
 		int word = bpttHistory[i + 1];	// because bpttHistory recorded lastWord, not curWord
 		newWordCounter ++;
-		//没10个词正则化一次
+		//每10个词正则化一次
 		if(newWordCounter % 10 == 0)
 		{
 			for(j = 0; j < hiddenSize; j ++)
@@ -850,7 +850,7 @@ void RNNPG::learnSent(int senLen)
 
 /**
  * @brief
- * 读取完了一整首诗之后，使用BPTT来训练RCM和CSM
+ * 读取完了一整句诗之后，使用BPTT来训练RCM
  * @param senLen 句子的长度
  */
 void RNNPG::learnSentBPTT(int senLen)
@@ -860,9 +860,11 @@ void RNNPG::learnSentBPTT(int senLen)
 	neuron* conBPTTCmbHis;
 	neuron* conBPTTCmbSent;
 	 */
-	// contextBPTTSentNum
+	//将h_i拷贝进conBPTTHis + hiddenSize * contextBPTTSentNum的位置
 	copyNeurons(conBPTTHis + hiddenSize * contextBPTTSentNum, hisNeu, hiddenSize, 3);
+	//将h_{i-1}拷贝进conBPTTCmbHis + hiddenSize * contextBPTTSentNum的位置
 	copyNeurons(conBPTTCmbHis + hiddenSize * contextBPTTSentNum, cmbNeu, hiddenSize, 3);
+	//将v_i拷贝进conBPTTCmbSent + hiddenSize * contextBPTTSentNum的位置
 	copyNeurons(conBPTTCmbSent + hiddenSize * contextBPTTSentNum, cmbNeu + hiddenSize, hiddenSize, 3);
 
 	if(!isLastSentOfPoem) return;
@@ -1175,7 +1177,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 		if(perSentUpdate)
 			clearNeurons(hisNeu, hiddenSize, 2);
 
-		// watch that the error in hisNeu must be inilizated to zero at the beginning of dealing with each sentence
+		// 注意之前只有在perSentUpdate时才清空，如果不是perSentUpdate，这里误差将会累积下去，等这一句话接受之后一起向前传递，watch that the error in hisNeu must be inilizated to zero at the beginning of dealing with each sentence
 		matrixXvector(hisNeu, inNeu + V, mapSyn[step], hiddenSize, 0, hiddenSize, 0, hiddenSize, 1);
 
 		// acumulate deviations for map matrix
@@ -2705,7 +2707,7 @@ void RNNPG::showParameters()
 // this function is from Tomas Mikolov's toolkit, rnnlm-0.2b
 /**
  * @brief
- * 实现矩阵和向量的乘法
+ * 实现矩阵和向量的乘法，注意，如果目标向量里已经有值，这个方法是不会将目标向量里原来的的值清空掉的，而是直接覆盖掉！！！所以要实现覆盖的模式，必须调用clearNeurons来清空
  * @param dest 目标向量
  * @param srcvec 源向量
  * @param srcmatrix 源矩阵
@@ -2802,6 +2804,7 @@ void RNNPG::matrixXvector(struct neuron *dest, struct neuron *srcvec, struct syn
     	    }
     	}
 
+		//控制误差的范围，避免梯度爆炸
     	for (a=from2; a<to2; a++) {
     	    if (dest[a].er>15) dest[a].er=15;
     	    if (dest[a].er<-15) dest[a].er=-15;

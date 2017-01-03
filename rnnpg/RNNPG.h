@@ -312,8 +312,22 @@ private:
 
 	// for BPTT of recurrent context model
 	bool isLastSentOfPoem;
-	bool conbptt;//如果conbptt为1，perSentUpdate为0，那么读入一整首诗之后，才会使用BPTT来训练CSM和RCM
-	int contextBPTTSentNum;
+	bool conbptt;//如果conbptt为1，perSentUpdate为0，那么读入一整首诗之后，训练完RGM之后，会使用BPTT来训练CSM和RCM
+	int contextBPTTSentNum;//存储当前在处理诗的哪一句
+	//conBPTTHis、conBPTTCmbHis、conBPTTCmbSent的存储结构
+	// |-------hiddenSize--------|
+	//M|						 |
+	//A|						 |
+	//X|						 |
+	//_|						 |
+	//S|						 |
+	//E|						 |
+	//N|						 |
+	//_|						 |
+	//P|						 |
+	//O|						 |
+	//E|						 |
+	//M|						 |
 	neuron* conBPTTHis;
 	neuron* conBPTTCmbHis;
 	neuron* conBPTTCmbSent;
@@ -345,7 +359,7 @@ private:
 	double consynMax;
 	double consynOffset;
 	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
-	bool perSentUpdate;//如果为1，在训练RGM的同时，每读入一句话都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
+	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup
@@ -548,7 +562,15 @@ private:
 			if(flag & 2) neus[i].er = 0;
 		}
 	}
-    void copyNeurons(neuron* dstNeu, neuron* srcNeu, int size, int flag)
+	/**
+	 * @brief
+	 * 向dstNeu拷贝从srcNeu指针开始，往后size个神经元的数据
+	 * @param dstNeu 拷贝目标
+	 * @param srcNeu 拷贝源
+	 * @param size 拷贝长度
+	 * @param flag 拷贝模式，flag=1代表的是只拷贝正向传播的值，flag=2代表拷贝反向传播的值，flag=3代表正向反向都拷贝
+	 */
+	void copyNeurons(neuron* dstNeu, neuron* srcNeu, int size, int flag)
     {
     	for(int i = 0; i < size; i ++)
     	{
