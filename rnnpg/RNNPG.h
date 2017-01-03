@@ -163,8 +163,8 @@ private:
 	//e|			   |
 	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组
 	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，先得到更新的Offset，再进行L2正则化
-	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度
-	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层
+	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的
+	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层,CSM不考虑</s>
 	// senNeu指针数组中每一个指针所指向的数据的存储结构，sen7Neu和sen5Neu的unitNum不同
 	// |--unitNum---|
 	//h|			|
@@ -197,7 +197,19 @@ private:
 	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j
 	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j
 	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的u_i^j
-
+	//senweSyn的存储结构
+	// |-----L(word embedding矩阵)-------|
+	//h|								|
+	//i|								|
+	//i|								|
+	//d|								|
+	//d|								|
+	//e|								|
+	//n|								|
+	//S|								|
+	//i|								|
+	//z|								|
+	//e|								|
 	synapse *senweSyn;		// the word embedding matrix in sentence model. This can be modified during training. We can inilizate it with word2vec word embedding, or just randomly
 
 	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
@@ -317,9 +329,9 @@ private:
 
 	// for controls
 	bool firstTimeInit;
-	int wordCounter;
+	int wordCounter;//考虑了句子结尾的</s>的字的计数
 	int totalPoemCount;
-	bool fixSentenceModelFirstLayer;
+	bool fixSentenceModelFirstLayer;//如果为1，则不在更新CSM的时候更新Word embedding矩阵
 	bool randomlyInitSenModelEmbedding;
 	double logp;
 	double minImprovement;

@@ -459,7 +459,7 @@ void RNNPG::loadVocab(const char *trainFile)
 
 /**
  * @brief
- * 进行CSM前向传播的计算，最后返回一个句子的表达
+ * 进行CSM前向传播的计算，最后返回一个句子的表达，CSM不考虑句子结尾的</s>
  * @param words 一行诗
  * @param senNeu 指向CSM各层神经元的指针
  * @param SEN_HIGHT CSM层数
@@ -759,7 +759,7 @@ void RNNPG::learnSent(int senLen)
 			}
 
 		// compute the back propagate error
-		// 如果没有到第一层并且第一层不是固定的大小
+		// 如果！（到第一层并且第一层是固定的大小）
 		if(i != 0 || !fixSentenceModelFirstLayer)
 		{
 			//将误差传递到第i层卷积层
@@ -774,7 +774,7 @@ void RNNPG::learnSent(int senLen)
 						senNeu[i][offsetNx + b + j].er += senNeu[i + 1][offset + b].er * conSyn[i][offsetCon + j].weight;
 				}
 			}
-			//限制以下误差的范围，防止梯度爆炸
+			//限制误差的范围，防止梯度爆炸
 			for(a = 0; a < hiddenSize; a ++)
 			{
 				offsetNx = a * unitNumNx;
@@ -816,14 +816,19 @@ void RNNPG::learnSent(int senLen)
 	// 第一层的大小应该和句子的长度是一样的
 	assert(unitNumNx == senLen);
 
+	//如果到了第一层并且第一层是固定的长度，就直接返回
 	if(fixSentenceModelFirstLayer)
 		return;
 	int V = vocab.getVocabSize();
+	//newWordCounter不考虑结尾的</s>
 	int newWordCounter = wordCounter - senLen - 1;
+	//更新word embedding矩阵
 	for(i = 0; i < unitNumNx; i ++)
 	{
+		//word是第i个位置的词的id
 		int word = bpttHistory[i + 1];	// because bpttHistory recorded lastWord, not curWord
 		newWordCounter ++;
+		//没10个词正则化一次
 		if(newWordCounter % 10 == 0)
 		{
 			for(j = 0; j < hiddenSize; j ++)
@@ -1193,7 +1198,7 @@ void RNNPG::learnNet(int lastWord, int curWord, int wordPos, int senLen)
 			// 训练RCM,和CSM
 			learnSent(senLen);
 
-		// 当已经到了第一个词的时候，结束该循环
+		// 当已经到了第一个词的时候，做上面的步骤，不做下面的步骤，避免越界
 		if(step == 0) continue;
 		// propagate error to previous layer
 		for(i = 0; i < hiddenSize; i ++)
