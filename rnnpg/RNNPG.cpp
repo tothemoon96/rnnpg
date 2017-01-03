@@ -570,8 +570,9 @@ void RNNPG::initSent(int senLen)
 
 /**
  * @brief
- * 重设输入层inNeu里的来自RCM的u_i^j和来自RGM的r_{j-1}，将其ac设置成stableAC
- * 清空hiddenNeu(RGM隐含层r_j)
+ * 主要是重设RGM
+ * 重设输入层inNeu里的来自RCM的u_i^j和来自RGM的r_{j-1}的ac和er，将其ac设置成stableAC
+ * 清空hiddenNeu(RGM隐含层r_j)的ac和er
  * 清空bpttHistory，每个位置存上-1，相当于没有见过的词
  */
 void RNNPG::flushNet()
@@ -1730,6 +1731,10 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 	learnSentAdaGrad(senLen);
 }
 
+/**
+ * @brief
+ * 将r_{j-1}的ac拷贝到r_j中
+ */
 void RNNPG::copyHiddenLayerToInput()
 {
 	int offset = vocab.getVocabSize() + hiddenSize;
@@ -1768,7 +1773,6 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 	matrixXvector(hisNeu, cmbNeu, compressSyn, hiddenSize * 2, 0, hiddenSize, 0, hiddenSize * 2, 0);
 	//激活
 	funACNeurons(hisNeu, hiddenSize);
-	//但是这里好像还差一步，将hisNeu的值拷贝到cmbNeu中，看看下面有没有相应步骤
 
 	// alternivate
 	// memcpy(hisNeu, sen_repr, sizeof(neuron)*hiddenSize);
@@ -1824,12 +1828,16 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 
 		// compress representation
 		if(i == SEN_NUM - 1)
+			// 如果已经训练到了最后一句，就停止循环
 			break;
+		//如果训练到最后一句
 		initSent(words.size());
 		sen_repr = sen2vec(words, senNeu, SEN_HIGHT);
+		//更新$\begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$
 		memcpy(cmbNeu, hisNeu, sizeof(neuron)*hiddenSize);
 		memcpy(cmbNeu + hiddenSize, sen_repr, sizeof(neuron)*hiddenSize);
 		clearNeurons(hisNeu, hiddenSize, 3);
+		//计算h_i
 		matrixXvector(hisNeu, cmbNeu, compressSyn, hiddenSize * 2, 0, hiddenSize, 0, hiddenSize * 2, 0);
 		funACNeurons(hisNeu, hiddenSize);
 	}
