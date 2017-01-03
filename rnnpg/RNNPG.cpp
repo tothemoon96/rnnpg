@@ -867,16 +867,20 @@ void RNNPG::learnSentBPTT(int senLen)
 	//将v_i拷贝进conBPTTCmbSent + hiddenSize * contextBPTTSentNum的位置
 	copyNeurons(conBPTTCmbSent + hiddenSize * contextBPTTSentNum, cmbNeu + hiddenSize, hiddenSize, 3);
 
+	//如果还没到一首诗的最后一句话就返回
 	if(!isLastSentOfPoem) return;
 
+	//到了最后一句诗，开始处理
 	double beta2 = alpha * beta;
 	int i, j, N = hiddenSize + hiddenSize;
 	for(int step = contextBPTTSentNum; step > 0; step --)
 	{
+		//将误差传递到$M \cdot \begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$上去
 		for(i = 0; i < hiddenSize; i ++)
 			hisNeu[i].er *= hisNeu[i].ac * (1 - hisNeu[i].ac);
+		//清空v_i的误差
 		clearNeurons(cmbNeu + hiddenSize, hiddenSize, 2);
-		// back propagate error from the history representation to sentence top layer (the final representation of the sentence)
+		//将误差传递到v_i上，back propagate error from the history representation to sentence top layer (the final representation of the sentence)
 		matrixXvector(cmbNeu, hisNeu, compressSyn, hiddenSize + hiddenSize, 0, hiddenSize, hiddenSize, hiddenSize + hiddenSize, 1);
 		// update compress matrix
 	//	if(wordCounter % 10 == 0)

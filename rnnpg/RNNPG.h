@@ -194,8 +194,8 @@ private:
 	synapse *compressSyn;		// used to compress history representation and the current representation. Or generate new history_i using history_i-1 and sen_repr_i，对应于RCM中的M矩阵
 	neuron *hisNeu;		// history representation，对应RCM中的h_i
 	neuron *cmbNeu;		// previous history representation and the current representation，对应RCM中的\begin{bmatrix}h_{i-1}\\v_i\end{bmatrix},注意这个向量的排列顺序刚好和论文里面是反着的
-	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j
-	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j
+	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j,包含结尾的</s>
+	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j，包含结尾的</s>
 	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的u_i^j
 	//senweSyn的存储结构
 	// |-----L(word embedding矩阵)-------|
@@ -311,7 +311,7 @@ private:
 	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly,用于将误差直接传导到u_i^j上
 
 	// for BPTT of recurrent context model
-	bool isLastSentOfPoem;
+	bool isLastSentOfPoem;//是不是一首诗的最后一句话
 	bool conbptt;//如果conbptt为1，perSentUpdate为0，那么读入一整首诗之后，训练完RGM之后，会使用BPTT来训练CSM和RCM
 	int contextBPTTSentNum;//存储当前在处理诗的哪一句
 	//conBPTTHis、conBPTTCmbHis、conBPTTCmbSent的存储结构
@@ -331,6 +331,18 @@ private:
 	neuron* conBPTTHis;
 	neuron* conBPTTCmbHis;
 	neuron* conBPTTCmbSent;
+	// bpttHisCmbSyn的存储结构，用来累计BPTT过程中到M矩阵的误差
+	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
+	//h|																	|
+	//i|																	|
+	//d|																	|
+	//d|																	|
+	//e|																	|
+	//n|																	|
+	//S|																	|
+	//i|																	|
+	//z|																	|
+	//e|																	|
 	synapse *bpttHisCmbSyn;
 
 	int maxIter;
