@@ -541,7 +541,7 @@ neuron* RNNPG::sen2vec(const vector<string> &words, neuron **senNeu, int SEN_HIG
 
 /**
  * @brief
- * 初始化CSM里的各个神经元，将其初值设置为0
+ * 初始化CSM里的各个神经元，将其初值ac和er设置为0
  * @param senLen 诗里每一句的长度
  */
 void RNNPG::initSent(int senLen)
@@ -570,9 +570,9 @@ void RNNPG::initSent(int senLen)
 
 /**
  * @brief
- * 重设输入层inNeu里的来自RCM的u_i^j和来自RGM的r_{j-1}，将其设置成stableAC
- * 清空hiddenNeu(RGM隐含层)
- * 清空bpttHistory
+ * 重设输入层inNeu里的来自RCM的u_i^j和来自RGM的r_{j-1}，将其ac设置成stableAC
+ * 清空hiddenNeu(RGM隐含层r_j)
+ * 清空bpttHistory，每个位置存上-1，相当于没有见过的词
  */
 void RNNPG::flushNet()
 {
@@ -589,6 +589,7 @@ void RNNPG::flushNet()
 	clearNeurons(hiddenNeu, hiddenSize, 3);
 	// clearNeurons(outNeu, V + classSize, 3);
 
+	//相当于给bpttHistory每个位置存的值都是-1，装逼！
 	memset(bpttHistory, 0xff, sizeof(int)*(SEN7_LENGTH+1));
 	// clearNeurons(bpttHiddenNeu, hiddenSize * (SEN7_LENGTH+1), 3);
 }
@@ -1755,14 +1756,11 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 	neuron *sen_repr = sen2vec(words, senNeu, SEN_HIGHT);		// this is the pointer for the top layer sentence model, DO NOT modify it
 
 	// for first sentence, we can just give the representation to the generation model, or
-	clearNeurons(cmbNeu, hiddenSize * 2, 3);		// this is probably a bug!!! change 1 to 3, also flush the error
+	clearNeurons(cmbNeu, hiddenSize * 2, 3);		// 这个好像是早期的注释，这段代码看上去没有问题，this is probably a bug!!! change 1 to 3, also flush the error
 
 	// init activation in recurrent context model，对RCM进行初始计算
-//	h_i=\sigma (M\cdot \begin{bmatrix}
-//	h_{i-1}\\
-//	v_i
-//	\end{bmatrix})
-	//使用historyStableAC对cmbNeu进行初始化
+	// h_i=\sigma (M\cdot \begin{bmatrix}h_{i-1}\\v_i\end{bmatrix})
+	// 使用historyStableAC对cmbNeu进行初始化
 	for(i = 0; i < hiddenSize; i ++)
 		cmbNeu[i].ac = historyStableAC;
 	memcpy(cmbNeu + hiddenSize, sen_repr, sizeof(neuron)*hiddenSize);
@@ -2717,7 +2715,7 @@ void RNNPG::showParameters()
 // this function is from Tomas Mikolov's toolkit, rnnlm-0.2b
 /**
  * @brief
- * 实现矩阵和向量的乘法，注意，如果目标向量里已经有值，这个方法是不会将目标向量里原来的的值清空掉的，而是直接覆盖掉！！！所以要实现覆盖的模式，必须调用clearNeurons来清空
+ * 实现矩阵和向量的乘法，注意，如果目标向量里已经有值，这个方法是不会将目标向量里原来的的值清空掉的，而是直接在原有的值的基础上加上新计算出来的值！！！所以要实现覆盖的模式，必须调用clearNeurons来清空
  * @param dest 目标向量
  * @param srcvec 源向量
  * @param srcmatrix 源矩阵
