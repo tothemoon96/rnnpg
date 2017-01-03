@@ -885,6 +885,7 @@ void RNNPG::learnSentBPTT(int senLen)
 		// update compress matrix
 	//	if(wordCounter % 10 == 0)
 	//	{
+			//将BPTT过程中对M累积的误差存在bpttHisCmbSyn中
 			for(i = 0; i < hiddenSize; i ++)
 				for(j = 0; j < N; j ++)
 				{
@@ -900,7 +901,8 @@ void RNNPG::learnSentBPTT(int senLen)
 	//				compressSyn[i * N + j].weight += alpha * hisNeu[i].er * cmbNeu[j].ac;
 	//	}
 
-		// error propagate in sentence model
+		// error propagate in sentence model,以下和learnSent中将误差传递至CSM中的过程差不多
+		//------learnSent(Start)------
 		neuron **senNeu = senLen == 5 ? sen5Neu : sen7Neu;
 		int SEN_HIGHT = senLen == 5 ? SEN5_HIGHT : SEN7_HIGHT;
 		int unitNum = 1, unitNumNx = 1, a = -1, b = -1;
@@ -995,17 +997,21 @@ void RNNPG::learnSentBPTT(int senLen)
 				}
 			}
 		}
+		//------learnSent(End)-------
+		//从这里开始是和learnSent不同的地方
 
 		// now this is the time for bptt -- hisNeu
+		// 清空h_{i-1}的误差
 		clearNeurons(cmbNeu, hiddenSize, 2);
 		// back propagate error from the history representation to sentence top layer (the final representation of the sentence)
+		// 将误差传递到cmbNeu中的h_{i-1}中去
 		matrixXvector(cmbNeu, hisNeu, compressSyn, hiddenSize + hiddenSize, 0, hiddenSize, 0, hiddenSize, 1);
 		// update compress matrix, already done at the beginning
 		if(step > 1)
 		{
 			for(i = 0; i < hiddenSize; i ++)
 			{
-				hisNeu[i].er = cmbNeu[i].er + conBPTTHis[(step - 1) * hiddenSize + i].er;
+				hisNeu[i].er = cmbNeu[i].er + conBPTTHis[(step - 1) * hiddenSize + i].er;//将误差沿着时间传递
 				hisNeu[i].ac = conBPTTHis[(step - 1) * hiddenSize + i].ac;
 				cmbNeu[i].ac = conBPTTCmbHis[(step - 1) * hiddenSize + i].ac;
 				cmbNeu[hiddenSize + i].ac = conBPTTCmbSent[(step - 1) * hiddenSize + i].ac;

@@ -328,9 +328,9 @@ private:
 	//O|						 |
 	//E|						 |
 	//M|						 |
-	neuron* conBPTTHis;
-	neuron* conBPTTCmbHis;
-	neuron* conBPTTCmbSent;
+	neuron* conBPTTHis;//将h_i拷贝进conBPTTHis + hiddenSize * contextBPTTSentNum的位置
+	neuron* conBPTTCmbHis;//将h_{i-1}拷贝进conBPTTCmbHis + hiddenSize * contextBPTTSentNum的位置
+	neuron* conBPTTCmbSent;//将v_i拷贝进conBPTTCmbSent + hiddenSize * contextBPTTSentNum的位置
 	// bpttHisCmbSyn的存储结构，用来累计BPTT过程中到M矩阵的误差
 	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
 	//h|																	|
