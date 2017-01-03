@@ -31,6 +31,7 @@ static union{
 } d2i;
 #define EXP_A (1048576/M_LN2)
 #define EXP_C 60801
+//实现了快速exp()的功能
 #define FAST_EXP(y) (d2i.n.i = EXP_A*(y)+(1072693248-EXP_C),d2i.d)
 
 bool pair_cmp(const pair<string,double> &p1, const pair<string,double> &p2);
@@ -64,11 +65,14 @@ struct neuron {
     }
 };
 
+//神经元之间连接的权值
 struct synapse {
     double weight;	//weight of synapse
 };
 
+//卷积层的数目
 const int MAX_CON_N = 4;
+//参见论文里卷积神经网络C每一层卷积核大小
 const int conSeq[MAX_CON_N] = { 2, 2, 3, 3 };  // convolution sequence
 const int MAX_PATH_LENGTH = 256;
 
@@ -134,6 +138,7 @@ public:
 	// show parameters
 	void showParameters();
 private:
+	//隐含层单元的数目
 	int hiddenSize;
 	Vocab vocab;
 	char trainFile[MAX_PATH_LENGTH];
@@ -144,64 +149,215 @@ private:
 	char vocabClassF[MAX_PATH_LENGTH];
 	int randomSeed;
 	WordEmbedding wdEmbed;
-	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix
-	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term
-	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};
-	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};
-	neuron *sen7Neu[SEN7_HIGHT];
-	neuron *sen5Neu[SEN5_HIGHT];
-	synapse *compressSyn;		// used to compress history representation and the current representation. Or generate new history_i using history_i-1 and sen_repr_i
-	neuron *hisNeu;		// history representation
-	neuron *cmbNeu;		// previous history representation and the current representation
-	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)
-	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)
-	neuron *conditionNeu;	// conditional representation for each sentence
-
+	// conSyn这个指针数组每个指针指向的数据的数据结构
+	// |---conSeq[i]---|
+	//h|			   |
+	//i|			   |
+	//d|			   |
+	//d|			   |
+	//e|			   |
+	//n|			   |
+	//S|			   |
+	//i|			   |
+	//z|			   |
+	//e|			   |
+	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组
+	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，先得到更新的Offset，再进行L2正则化
+	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的
+	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层,CSM不考虑</s>
+	// senNeu指针数组中每一个指针所指向的数据的存储结构，sen7Neu和sen5Neu的unitNum不同
+	// |--unitNum---|
+	//h|			|
+	//i|			|
+	//d|			|
+	//d|			|
+	//e|			|
+	//n|			|
+	//S|			|
+	//i|			|
+	//z|			|
+	//e|			|
+	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元
+	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元
+	// compressSyn的存储结构
+	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
+	//h|																	|
+	//i|																	|
+	//d|																	|
+	//d|																	|
+	//e|																	|
+	//n|																	|
+	//S|																	|
+	//i|																	|
+	//z|																	|
+	//e|																	|
+	synapse *compressSyn;		// used to compress history representation and the current representation. Or generate new history_i using history_i-1 and sen_repr_i，对应于RCM中的M矩阵
+	neuron *hisNeu;		// history representation，对应RCM中的h_i
+	neuron *cmbNeu;		// previous history representation and the current representation，对应RCM中的\begin{bmatrix}h_{i-1}\\v_i\end{bmatrix},注意这个向量的排列顺序刚好和论文里面是反着的
+	synapse *map7Syn[8];	// this matrix is used to map representation to each postion in the generated sentence (for 7 character sentences)，对应于RCM中7言诗的U_j,包含结尾的</s>
+	synapse *map5Syn[6];	// this matrix is used to map representation to each postion in the generated sentence (for 5 character sentences)，对应于RCM中5言诗的U_j，包含结尾的</s>
+	neuron *conditionNeu;	// conditional representation for each sentence，对应于RCM中的u_i^j
+	//senweSyn的存储结构
+	// |-----L(word embedding矩阵)-------|
+	//h|								|
+	//i|								|
+	//i|								|
+	//d|								|
+	//d|								|
+	//e|								|
+	//n|								|
+	//S|								|
+	//i|								|
+	//z|								|
+	//e|								|
 	synapse *senweSyn;		// the word embedding matrix in sentence model. This can be modified during training. We can inilizate it with word2vec word embedding, or just randomly
 
-	neuron *inNeu;
-	neuron *hiddenNeu;
-	neuron *outNeu;
+	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
+	neuron *hiddenNeu;//对应于RGM的隐含层r_j
+	neuron *outNeu;//前V个神经元表示的是P(word|word_class,context)，后面classSize个神经元表示的是P(word_class,context)
+	//hiddenInSyn的存储结构
+	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
+	//h|								|					|				    |
+	//i|								|					|				    |
+	//i|								|					|				    |
+	//d|								|					|				    |
+	//d|								|					|				    |
+	//e|								|					|				    |
+	//n|								|					|				    |
+	//S|								|					|				    |
+	//i|								|					|				    |
+	//z|								|					|				    |
+	//e|								|					|				    |
 	synapse *hiddenInSyn;
+	//outHiddenSyn的存储结构，大致对应于RGM的Y矩阵
+	//|----------hiddenSize--------|
+	//|							   |
+	//|							   |
+	//|							   |用于计算P(word|word_class,context)
+	//V							   |
+	//|							   |
+	//|							   |
+	//|							   |
+	//-----------------------------|
+	//|							   |
+	//|							   |
+	//|							   |
+	//c							   |
+	//l							   |
+	//a							   |
+	//s							   |用于计算P(word_class,context)
+	//s							   |
+	//S							   |
+	//i							   |
+	//z							   |
+	//e							   |
+	//|							   |
+	//|							   |
+	//|							   |
 	synapse *outHiddenSyn;
 	int classSize;
 	Word *voc_arr;
-	int *classStart;
-	int *classEnd;
+	int *classStart;//一个int数组，数组中的每个元素对应于V中该类词的开始的编号
+	int *classEnd;//一个int数组，数组中的每个元素对应于V中该类词结束的编号+1
 
 	// for back propagation
-	int *bpttHistory;
-	neuron* bpttHiddenNeu;
-	neuron* bpttInHiddenNeu;
-	synapse *bpttHiddenInSyn;
-	neuron* bpttConditionNeu;
+	int *bpttHistory;//在wordPos处存储上一个词的ID
+	neuron* bpttHiddenNeu;//将r_j放进了bpttHiddenNeu + (wordPos * hiddenSize)
+	neuron* bpttInHiddenNeu;//将r_{j-1}放进了bpttInHiddenNeu + (wordPos * hiddenSize)
+	// bpttHiddenInSyn的存储结构
+	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
+	//h|								|					|				    |
+	//i|								|					|				    |
+	//i|								|					|				    |
+	//d|								|					|				    |
+	//d|								|					|				    |
+	//e|								|					|				    |
+	//n|								|					|				    |
+	//S|								|					|				    |
+	//i|								|					|				    |
+	//z|								|					|				    |
+	//e|								|					|				    |
+	synapse *bpttHiddenInSyn;//存储BPTT过程中沿着时间传递的hiddenInSyn的累积误差，用于更新hiddenInSyn
+	neuron* bpttConditionNeu;//将u_i^j放进了bpttConditionNeu + (wordPos * hiddenSize)
 
 	// for directErr propagate to input layer
+	// outConditionDSyn的存储结构，和outHiddenSyn相似，只是不考虑RGM的作用了
+	// 这里用RCM直接生成j+1位置的词$y_{j+1}=outConditionDSyn*u_i^j$
+	//|----------hiddenSize--------|
+	//|							   |
+	//|							   |
+	//|							   |
+	//V							   |
+	//|							   |
+	//|							   |
+	//|							   |
+	//-----------------------------|
+	//|							   |
+	//|							   |
+	//|							   |
+	//c							   |
+	//l							   |
+	//a							   |
+	//s							   |
+	//s							   |
+	//S							   |
+	//i							   |
+	//z							   |
+	//e							   |
+	//|							   |
+	//|							   |
+	//|							   |
 	synapse *outConditionDSyn;
-	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly
+	neuron *bufOutConditionNeu;		// errors from every word in the sentence to condition neuron directly,用于将误差直接传导到u_i^j上
 
 	// for BPTT of recurrent context model
-	bool isLastSentOfPoem;
-	bool conbptt;
-	int contextBPTTSentNum;
-	neuron* conBPTTHis;
-	neuron* conBPTTCmbHis;
-	neuron* conBPTTCmbSent;
+	bool isLastSentOfPoem;//是不是一首诗的最后一句话
+	bool conbptt;//如果conbptt为1，perSentUpdate为0，那么读入一整首诗之后，训练完RGM之后，会使用BPTT来训练CSM和RCM
+	int contextBPTTSentNum;//存储当前在处理诗的哪一句
+	//conBPTTHis、conBPTTCmbHis、conBPTTCmbSent的存储结构
+	// |-------hiddenSize--------|
+	//M|						 |
+	//A|						 |
+	//X|						 |
+	//_|						 |
+	//S|						 |
+	//E|						 |
+	//N|						 |
+	//_|						 |
+	//P|						 |
+	//O|						 |
+	//E|						 |
+	//M|						 |
+	neuron* conBPTTHis;//将h_i拷贝进conBPTTHis + hiddenSize * contextBPTTSentNum的位置
+	neuron* conBPTTCmbHis;//将h_{i-1}拷贝进conBPTTCmbHis + hiddenSize * contextBPTTSentNum的位置
+	neuron* conBPTTCmbSent;//将v_i拷贝进conBPTTCmbSent + hiddenSize * contextBPTTSentNum的位置
+	// bpttHisCmbSyn的存储结构，用来累计BPTT过程中到M矩阵的误差
+	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
+	//h|																	|
+	//i|																	|
+	//d|																	|
+	//d|																	|
+	//e|																	|
+	//n|																	|
+	//S|																	|
+	//i|																	|
+	//z|																	|
+	//e|																	|
 	synapse *bpttHisCmbSyn;
 
 	int maxIter;
 	double alpha;	// this is the learning rate
 	double alphaDiv;	// this is the learning rate decay
-	double beta;	// this is the weight for L2 normalization term in objective function
+	double beta;	// this is the weight for L2 normalization term in objective function,L2正则化因子
 
 	int mode;
 	enum ModeType{TRAIN_MODE, TEST_MODE, UNDEFINED_MODE};
 
 	// for controls
 	bool firstTimeInit;
-	int wordCounter;
+	int wordCounter;//考虑了句子结尾的</s>的字的计数
 	int totalPoemCount;
-	bool fixSentenceModelFirstLayer;
+	bool fixSentenceModelFirstLayer;//如果为1，则不在更新CSM的时候更新Word embedding矩阵
 	bool randomlyInitSenModelEmbedding;
 	double logp;
 	double minImprovement;
@@ -214,8 +370,8 @@ private:
 	double consynMin;
 	double consynMax;
 	double consynOffset;
-	bool directError;
-	bool perSentUpdate;
+	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
+	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup
@@ -402,15 +558,31 @@ private:
     void testNetFile(const char *testF);
     void assignClassLabel();
     void copyHiddenLayerToInput();
-    void clearNeurons(neuron* neus, int size, int flag)
+	/**
+	 * @brief
+	 * 清空从neus指针开始，往后size个神经元的数据
+	 * @param neus 开始清空的神经元指针
+	 * @param size 清空多少个
+	 * @param flag 清空模式，flag=1代表的是只清空正向传播的值，flag=2代表清空反向传播的值，flag=3代表正向反向都清空
+	 */
+	void clearNeurons(neuron* neus, int size, int flag)
 	{
 		for(int i = 0; i < size; i ++)
 		{
+			//注意这里做的是与运算，flag=1代表的是只清空正向传播的值，flag=2代表清空反向传播的值，flag=3代表正向反向都清空
 			if(flag & 1) neus[i].ac = 0;
 			if(flag & 2) neus[i].er = 0;
 		}
 	}
-    void copyNeurons(neuron* dstNeu, neuron* srcNeu, int size, int flag)
+	/**
+	 * @brief
+	 * 向dstNeu拷贝从srcNeu指针开始，往后size个神经元的数据
+	 * @param dstNeu 拷贝目标
+	 * @param srcNeu 拷贝源
+	 * @param size 拷贝长度
+	 * @param flag 拷贝模式，flag=1代表的是只拷贝正向传播的值，flag=2代表拷贝反向传播的值，flag=3代表正向反向都拷贝
+	 */
+	void copyNeurons(neuron* dstNeu, neuron* srcNeu, int size, int flag)
     {
     	for(int i = 0; i < size; i ++)
     	{
@@ -418,7 +590,13 @@ private:
     		if(flag & 2) dstNeu[i].er = srcNeu[i].er;
     	}
     }
-    void funACNeurons(neuron* neus, int size)
+	/**
+	 * @brief
+	 * 对一个神经元的数组逐个进行激活
+	 * @param neus 指向神经元数组的指针
+	 * @param size 数组的长度
+	 */
+	void funACNeurons(neuron* neus, int size)
     {
     	for(int i = 0; i < size; i ++)
     		neus[i].fun_ac();
@@ -430,6 +608,13 @@ private:
     	cout << endl;
     }
 	inline bool isSep(char ch)	{	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';		}
+	/**
+	 * @brief
+	 * 产生min和max之间的随机数
+	 * @param min 最大值
+	 * @param max 最小值
+	 * @return double 返回的浮点数
+	 */
 	inline double random(double min, double max)
 	{
 	    return rand()/(double)RAND_MAX*(max-min)+min;

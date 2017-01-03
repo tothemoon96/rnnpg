@@ -14,6 +14,7 @@ FILE *xfopen(const char *infile, const char *mode, const char *msg)
 	FILE *f = fopen(infile, mode);
 	if(f == NULL)
 	{
+		//将错误信息打印到标准错误流
 		fprintf(stderr, "open file '%s' failed! (%s)\n", infile, msg);
 		exit(1);
 	}
@@ -30,6 +31,7 @@ void* xmalloc (size_t size, const char *msg)
 	void* p = malloc(size);
 	if(p == NULL)
 	{
+		//将错误信息打印到标准错误流
 		fprintf(stderr, "alloc memory %d failed (%s)\n", size, msg);
 		exit(1);
 	}
@@ -79,6 +81,14 @@ int split(const char *str, const char *sep, vector<string>& fields)
 	return fields.size();
 }
 
+/**
+ * @brief
+ * 将str字符串根据sep分隔符进行分割，将分割结果存入fields这个string容器中
+ * @param str 待分割字符串
+ * @param sep 分隔符
+ * @param fields 存储分割结果的string的vector
+ * @return int 返回存储分割结果的fields.size()
+ */
 int split(string str, const char *sep, vector<string>& fields)
 {
 	const char *cstr = str.c_str();

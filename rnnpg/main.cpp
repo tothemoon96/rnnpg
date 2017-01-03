@@ -52,6 +52,14 @@ using namespace std;
 #include "Config.h"
 #include "Decoder.h"
 
+/**
+ * @brief
+ * 这个函数的功能是给定返回argv这个字符串指针中字符串curArg的数组下标，argc给定数组的长度
+ * @param argc
+ * @param argv
+ * @param curArg
+ * @return int -1：没有找到指定的参数;other：返回下标的index
+ */
 int getArgPos(int argc, char **argv, const char *curArg)
 {
 	for(int i = 1; i < argc; i ++)
@@ -61,6 +69,7 @@ int getArgPos(int argc, char **argv, const char *curArg)
 }
 
 /*
+ * 这是rnnpg程序运行的一些参数
 -conf <conf file>  -- configuration file, the program first read the configuration file options and then use the command line options. That is to say command line options have higher priorities
 -alpha <double>    -- learning rate
 -beta  <double>    -- regulation weight
@@ -124,6 +133,7 @@ void cmdLineConf(int argc, char **argv)
 	}
 	// RNNPG rnnpg;
 	int pos;
+	//const int可以当做常量使用
 	const int PATH_LEN = 1024;
 	double alpha = 0.05;
 	double alphaDiv = 2.0;
@@ -268,7 +278,8 @@ void cmdLineConf(int argc, char **argv)
 	if((pos = getArgPos(argc, argv, "-adaGrad")) != -1)
 		adaGrad = atob(argv[pos+1]);
 
-	RNNPG rnnpg;
+	RNNPG rnnpg; //rnnpg部分
+	//这里是一些参数初始化的工作
 	rnnpg.setAlpha(alpha);
 	rnnpg.setAlphaDiv(alphaDiv);
 	rnnpg.setBeta(beta);
@@ -304,6 +315,7 @@ void cmdLineConf(int argc, char **argv)
 	if(vocabClassF[0] != 0)
 		rnnpg.setVocabClassFile(vocabClassF);
 
+	//这里开始训练了，核心的部分应该在这里
 	if(trainF[0] != 0 && validF[0] != 0 && testF[0] != 0)
 		rnnpg.trainNet();
 
@@ -311,6 +323,7 @@ void cmdLineConf(int argc, char **argv)
 		rnnpg.testNet();
 }
 
+//这个函数没有用到
 void testDecoder()
 {
 	const char *modelPath = "/afs/inf.ed.ac.uk/user/s12/s1270921/Desktop/programming/c++/RNN-Related/RNN_Poem_Generation_Decoder/models/iter066_74809_final";
@@ -348,6 +361,7 @@ void testDecoder()
 	cout << "time spend " << (double)(end - start)/CLOCKS_PER_SEC << " S" << endl;
 }
 
+//这个函数没有用到
 void printUsageDecoder()
 {
 	printf("-inFile <infile>\n");
@@ -363,6 +377,7 @@ void printUsageDecoder()
 	printf("-weightFile <weightFile>\n");
 }
 
+//这个函数没有用到
 void cmdLineDecoder(int argc, char **argv)
 {
 	if(argc < 3)
