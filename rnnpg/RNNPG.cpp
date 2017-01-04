@@ -491,6 +491,7 @@ neuron* RNNPG::sen2vec(const vector<string> &words, neuron **senNeu, int SEN_HIG
 	{
 		//代表了一个词的id
 		int curWord = vocab.getVocabID(words[i].c_str());
+		//如果这个词是词汇表里没有的新词就用<R>来代替
 		if(curWord == -1) curWord = vocab.getVocabID("<R>");
 		//对于每个词对应的神经元的每个维度
 		for(j = 0; j < hiddenSize; j ++)
@@ -1809,6 +1810,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 			curWord = vocab.getVocabID(words[wdPos].c_str());
 			if(curWord == -1)
 				cout << "unseen word " << "'" << words[wdPos] << "'" << endl;
+			//在训练过程中是不可能遇到没有见到过的新词的
 			assert(curWord != -1);		// this is impossible, or there is a bug!
 			inNeu[lastWord].ac = 1;
 			computeNet(lastWord, curWord, wdPos, mapSyn);
@@ -1830,7 +1832,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 		if(i == SEN_NUM - 1)
 			// 如果已经训练到了最后一句，就停止循环
 			break;
-		//如果训练到最后一句
+		//如果没有训练到最后一句，进行下一句诗的句子的表达的计算
 		initSent(words.size());
 		sen_repr = sen2vec(words, senNeu, SEN_HIGHT);
 		//更新$\begin{bmatrix}v_i\\h_{i-1}\end{bmatrix}$
@@ -1848,6 +1850,7 @@ void RNNPG::testPoem(const vector<string> &sentences)
 	const int SEN_NUM = 4;
 	vector<string> words;
 	int i, SEN_HIGHT = -1;
+	//CSM中对应每句诗的神经元
 	neuron **senNeu = NULL;
 	words.clear();
 	split(sentences[0].c_str(), " ", words);
@@ -1859,7 +1862,7 @@ void RNNPG::testPoem(const vector<string> &sentences)
 	neuron *sen_repr = sen2vec(words, senNeu, SEN_HIGHT);		// this is the pointer for the top layer sentence model, DO NOT modify it
 
 	// for first sentence, we can just give the representation to the generation model, or
-	clearNeurons(cmbNeu, hiddenSize * 2, 3);		// this is probably a bug!!! change 1 to 3, also flush the error
+	clearNeurons(cmbNeu, hiddenSize * 2, 3);		// 这个好像是早期的bug，现在看上去好像没有什么问题，this is probably a bug!!! change 1 to 3, also flush the error
 	memcpy(cmbNeu + hiddenSize, sen_repr, sizeof(neuron)*hiddenSize);
 	clearNeurons(hisNeu, hiddenSize, 3);
 	matrixXvector(hisNeu, cmbNeu, compressSyn, hiddenSize * 2, 0, hiddenSize, 0, hiddenSize * 2, 0);
@@ -1870,6 +1873,7 @@ void RNNPG::testPoem(const vector<string> &sentences)
 
 	synapse **mapSyn = words.size() == 5 ? map5Syn : map7Syn;
 	// this is for the subsequence sentences (generation and compress the representation)
+	//现在从第1句开始计算，之前是计算的第0句
 	for(i = 1; i < SEN_NUM; i ++)
 	{
 		words.clear();
@@ -1896,17 +1900,21 @@ void RNNPG::testPoem(const vector<string> &sentences)
 			bool isRare = false;
 			if(curWord == -1)
 			{
+				//在测试过程中可能遇到新词,对于出现的新词，word embedding矩阵L和X的相应位置应该都是初始化的默认值
 				// when the word cannot be found, we use <R> instead
 				curWord = vocab.getVocabID("<R>");
 				isRare = true;
 			}
+			//表明绝对不能出现curWord是-1，它要被替换成<R>对应的id
 			assert(curWord != -1);		// this is impossible, or there is a bug!
 			inNeu[lastWord].ac = 1;
 			computeNet(lastWord, curWord, wdPos, mapSyn);
 			// perhaps I also need to caculate the log-likelihood
 			if(!isRare)
+				// 服从以下假设P(word,word_context|context)=P(word|word_class,context) \cdot P(word_class|context)
 				logp += log10(outNeu[voc_arr[curWord].classIndex+vocab.getVocabSize()].ac * outNeu[curWord].ac);
 			else
+				// voc_arr[curWord].freq指的是<R>这个未见词出现的次数
 				logp += log10(outNeu[voc_arr[curWord].classIndex+vocab.getVocabSize()].ac * outNeu[curWord].ac / voc_arr[curWord].freq);
 			// learnNet, tomorrow come back to the sentence model
 			// learnNet(lastWord, curWord, wdPos, words.size() - 1);
@@ -1918,7 +1926,9 @@ void RNNPG::testPoem(const vector<string> &sentences)
 
 		// compress representation
 		if(i == SEN_NUM - 1)
+			// 如果已经训练到了最后一句，就停止循环
 			break;
+		//如果没有训练到最后一句，进行下一句诗的句子的表达的计算
 		initSent(words.size());
 		sen_repr = sen2vec(words, senNeu, SEN_HIGHT);
 		memcpy(cmbNeu, hisNeu, sizeof(neuron)*hiddenSize);
