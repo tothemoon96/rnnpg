@@ -447,12 +447,12 @@ void RNNPG::loadVocab(const char *trainFile)
 			//如果没有到达buf的末尾并且当前是分隔符，跳过
 			while(buf[i] != '\0' && isSep(buf[i])) i ++;
 			int j = 0;
-			//如果没有到达buf的末尾并且当前不是分隔符
+			//如果没有到达buf的末尾并且当前不是分隔符，将一个字符读入到word里
 			while(buf[i] != '\0' && !isSep(buf[i]))
 			{
 				if(j < WDLEN - 1)
 					word[j++] = buf[i];
-				//这里敢大胆的把i++放在这里，是因为训练文件里i最多只能加一次，所以不会跳过字符导致vocab漏掉了字符
+				//一个字符要么是一个标准的中文字符，比如：啊、哦、额，或者是一个标识符，比如<R>，所以word的空间是够用的
 				i ++;
 			}
 			//向word写入0分隔符，表明word数组已经写满了或者读到了buf的\0
@@ -1837,7 +1837,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 			curWord = vocab.getVocabID(words[wdPos].c_str());
 			if(curWord == -1)
 				cout << "unseen word " << "'" << words[wdPos] << "'" << endl;
-			//在训练过程中是不可能遇到没有见到过的新词的
+			//在训练过程中是不可能遇到在词表里查不到的词的
 			assert(curWord != -1);		// this is impossible, or there is a bug!
 			inNeu[lastWord].ac = 1;
 			computeNet(lastWord, curWord, wdPos, mapSyn);
@@ -1933,7 +1933,7 @@ void RNNPG::testPoem(const vector<string> &sentences)
 			bool isRare = false;
 			if(curWord == -1)
 			{
-				//在测试过程中可能遇到新词,对于出现的新词，word embedding矩阵L和X的相应位置应该都是初始化的默认值
+				//在测试过程中可能遇到词表里查不到的词,对于出现的这些词，使用<R>作为替换
 				// when the word cannot be found, we use <R> instead
 				curWord = vocab.getVocabID("<R>");
 				isRare = true;
