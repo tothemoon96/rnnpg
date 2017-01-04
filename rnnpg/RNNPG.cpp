@@ -351,6 +351,7 @@ void RNNPG::initNet()
 	for(i = 0; i < N; i ++)
 		outHiddenSyn[i].weight = random(-0.1, 0.1)+random(-0.1, 0.1)+random(-0.1, 0.1);
 
+	//如果存在已经计算好的词类的文件，就从外部载入，否则自己计算一遍
 	if(vocabClassF[0] != 0)
 	{
 		vocab.loadVocabClass(vocabClassF);
@@ -420,6 +421,11 @@ void RNNPG::initNet()
 		sumGradSquare.init(this);
 }
 
+/**
+ * @brief
+ * 生成字符表
+ * @param trainFile
+ */
 void RNNPG::loadVocab(const char *trainFile)
 {
 	char buf[1024];
@@ -427,25 +433,32 @@ void RNNPG::loadVocab(const char *trainFile)
 	vocab.add2Vocab("</s>");
 	FILE *fin = xfopen(trainFile, "r");
 	totalPoemCount = 0;
+	//将字符流不断读入buf中，取一行，也就是取一句诗
 	while( fgets(buf,sizeof(buf),fin) )
 	{
 		int i = 0;
+		//如果没有到达buf的末尾
 		while(buf[i] != '\0')
 		{
+			//如果没有到达buf的末尾并且当前是分隔符，跳过
 			while(buf[i] != '\0' && isSep(buf[i])) i ++;
 			int j = 0;
+			//如果没有到达buf的末尾并且当前不是分隔符
 			while(buf[i] != '\0' && !isSep(buf[i]))
 			{
 				if(j < WDLEN - 1)
 					word[j++] = buf[i];
+				//这里敢大胆的把i++放在这里，是因为训练文件里i最多只能加一次，所以不会跳过字符导致vocab漏掉了字符
 				i ++;
 			}
+			//向word写入0分隔符，表明word数组已经写满了或者读到了buf的\0
 			word[j] = 0;
 			if(j > 0)
+				//加入词表
 				vocab.add2Vocab(word);
 		}
 		totalPoemCount ++;
-		// every poem has four lines, so 4 end of line!
+		// 添加行尾标识符，every poem has four lines, so 4 end of line!
 		vocab.add2Vocab("</s>");
 		vocab.add2Vocab("</s>");
 		vocab.add2Vocab("</s>");
@@ -596,6 +609,10 @@ void RNNPG::flushNet()
 	// clearNeurons(bpttHiddenNeu, hiddenSize * (SEN7_LENGTH+1), 3);
 }
 
+/**
+ * @brief
+ * 计算每个词所属的类别
+ */
 void RNNPG::assignClassLabel()
 {
 	classStart = (int*)xmalloc(classSize * sizeof(int));
@@ -610,6 +627,7 @@ void RNNPG::assignClassLabel()
 	classStart[0] = 0;
 	for(i = 0; i < V; i ++)
 	{
+		//prob某个词出现的概率，voc_arr里的词是按照出现频率由低到高进行排序的
 		prob += voc_arr[i].freq / (double)tot_freq;
 		if(prob > 1) prob = 1;
 		voc_arr[i].classIndex = classIndex;
@@ -1766,7 +1784,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 
 	// init activation in recurrent context model，对RCM进行初始计算
 	// h_i=\sigma (M\cdot \begin{bmatrix}h_{i-1}\\v_i\end{bmatrix})
-	// 使用historyStableAC对cmbNeu进行初始化
+	// 使用historyStableAC对cmbNeu中的h_{i-1}进行初始化
 	for(i = 0; i < hiddenSize; i ++)
 		cmbNeu[i].ac = historyStableAC;
 	memcpy(cmbNeu + hiddenSize, sen_repr, sizeof(neuron)*hiddenSize);
@@ -1863,6 +1881,7 @@ void RNNPG::testPoem(const vector<string> &sentences)
 
 	// for first sentence, we can just give the representation to the generation model, or
 	clearNeurons(cmbNeu, hiddenSize * 2, 3);		// 这个好像是早期的bug，现在看上去好像没有什么问题，this is probably a bug!!! change 1 to 3, also flush the error
+	//和训练的时候不一样，这里没有设置h_0为historyStableAC
 	memcpy(cmbNeu + hiddenSize, sen_repr, sizeof(neuron)*hiddenSize);
 	clearNeurons(hisNeu, hiddenSize, 3);
 	matrixXvector(hisNeu, cmbNeu, compressSyn, hiddenSize * 2, 0, hiddenSize, 0, hiddenSize * 2, 0);
@@ -2342,7 +2361,7 @@ void RNNPG::trainNet()
 		else
 			saveWeights();
 
-		//对数似然*最小的进步超过了lastLogp就停止训练
+		//对数似然*最小的进步小于lastLogp就停止训练，换句话说，就是训练过程中误差的改变已经比较小了，这个时候有两部，一是降低学习率，如果已经降低之后模型得到的改进还是很小，那么停止训练
 		if (logp*minImprovement < lastLogp)
 		{   //***maybe put some variable here to define what is minimal improvement??
 			if (alphaDivide == 0)
@@ -2351,8 +2370,8 @@ void RNNPG::trainNet()
 				break;
 		}
 
-		// if (alphaDivide) alpha/=2;，修改学习率
-		if (alphaDivide) alpha/=alphaDiv;//学习率减半
+		// if (alphaDivide) alpha/=2;修改学习率
+		if (alphaDivide) alpha/=alphaDiv;//修改学习率
 
 		lastLogp = logp;
 	}
