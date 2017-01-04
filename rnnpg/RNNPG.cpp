@@ -227,6 +227,10 @@ RNNPG::~RNNPG()
 		sumGradSquare.releaseMemory();
 }
 
+/**
+ * @brief
+ * 初始化rnnpg,分配内存空间，设置一些初值，设置字符表
+ */
 void RNNPG::initNet()
 {
 	if(vocab.getVocabSize() == 0)
@@ -1761,6 +1765,11 @@ void RNNPG::copyHiddenLayerToInput()
 		inNeu[offset + i].ac = hiddenNeu[i].ac;
 }
 
+/**
+ * @brief
+ * 使用一首诗进行训练
+ * @param sentences 存储一首诗里的每句话的向量
+ */
 void RNNPG::trainPoem(const vector<string> &sentences)
 {
 	//判断5言诗还是7言诗
@@ -1863,6 +1872,11 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 	}
 }
 
+/**
+ * @brief
+ * 使用一首诗进行测试
+ * @param sentences 存储一首诗里的每句话的向量
+ */
 void RNNPG::testPoem(const vector<string> &sentences)
 {
 	const int SEN_NUM = 4;
@@ -2251,6 +2265,11 @@ void RNNPG::restoreWeights()
 		outConditionDSyn[i].weight = outConditionDSyn_backup[i].weight;
 }
 
+/**
+ * @brief
+ * 使用一个保存诗的文件进行测试
+ * @param testF 文件路径
+ */
 void RNNPG::testNetFile(const char *testF)
 {
 	FILE *fin = xfopen(testF, "r", "computeNet -- open valid/testFile");
@@ -2272,6 +2291,10 @@ void RNNPG::testNetFile(const char *testF)
 	fclose(fin);
 }
 
+/**
+ * @brief
+ * 训练整个网络
+ */
 void RNNPG::trainNet()
 {
 	mode = TRAIN_MODE;
@@ -2941,6 +2964,13 @@ void RNNPG::getContextHiddenNeu(vector<string> &prevSents, neuron **contextHidde
 	}
 }
 
+/**
+ * @brief
+ * 比较两个pair<string,double>，如果p1.second<p2.second，返回0，否则返回1
+ * @param p1 pair<string,double>的引用
+ * @param p2 pair<string,double>的引用
+ * @return bool 如果p1.second<p2.second，返回0，否则返回1
+ */
 bool pair_cmp(const pair<string,double> &p1, const pair<string,double> &p2)
 {
 	return !(p1.second < p2.second);
@@ -3130,6 +3160,10 @@ double RNNPG::computeNetContext(const char *lword, int startPos, const vector<st
 	return phraseLogProb;
 }
 
+/**
+ * @brief
+ * 测试网络
+ */
 void RNNPG::testNet()
 {
 	mode = TEST_MODE;
