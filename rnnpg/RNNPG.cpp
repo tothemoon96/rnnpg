@@ -631,7 +631,7 @@ void RNNPG::assignClassLabel()
 	classStart[0] = 0;
 	for(i = 0; i < V; i ++)
 	{
-		//prob某个词出现的概率，voc_arr里的词是按照出现频率由低到高进行排序的
+		//prob某个词出现的概率
 		prob += voc_arr[i].freq / (double)tot_freq;
 		if(prob > 1) prob = 1;
 		voc_arr[i].classIndex = classIndex;
@@ -2418,12 +2418,22 @@ void RNNPG::trainNet()
 	}
 }
 
-// outConditionDSyn still missing
+// 在目前的版本中已经保存了outConditionDSyn，这是早期的注释，outConditionDSyn still missing
+/**
+ * @brief
+ * 保存
+ * ->CSM卷积核C_{:,i}^{l,n}，Word embedding矩阵L
+ * ->RCM的M矩阵，5言诗和7言诗的U_j
+ * ->RGM的R矩阵，X矩阵，H矩阵，Y矩阵（词、词类）
+ * ->直接使用RCM的u_i^j生成词的
+ * @param fout 输出文件的文件指针outConditionDSyn矩阵
+ */
 void RNNPG::saveSynapse(FILE *fout)
 {
 	int i, j, N;
 	for(i = 0; i < MAX_CON_N; i ++)
 	{
+		//第几层的卷积核，原始诗句是第0层
 		fprintf(fout, "convolutional matrix %d:\n", i);
 		N = hiddenSize * conSeq[i];
 		for(j = 0; j < N; j ++)
@@ -2481,7 +2491,7 @@ void RNNPG::saveSynapse(FILE *fout)
 	fprintf(fout, "\n\n");
 }
 
-// outConditionDSyn still missing
+// 在目前的版本中已经读取了outConditionDSyn，这是早期的注释，outConditionDSyn still missing
 void RNNPG::loadSynapse(FILE *fin)
 {
 	int i, j, N;
@@ -2533,18 +2543,32 @@ void RNNPG::loadSynapse(FILE *fin)
 		fscanf(fin, "%lf", &outConditionDSyn[i].weight);
 }
 
+/**
+ * @brief
+ * 从文件中载入整个网络
+ * @param infile 保存模型的文件路径
+ */
 void RNNPG::loadNet(const char *infile)
 {
 	FILE *fin = xfopen(infile, "rb");
+	//载入基础设置
 	loadBasicSetting(fin);
+	//载入词汇表
 	vocab.load(fin);
 	if(inNeu == NULL)
 		initNet();
+	//载入权重矩阵
 	loadSynapse(fin);
+	//载入每个神经单元
 	loadNeuron(fin);
 	fclose(fin);
 }
 
+/**
+ * @brief
+ * 保存整个神经网络模型到文件中
+ * @param outfile 存储模型的文件路径
+ */
 void RNNPG::saveNet(const char *outfile)
 {
 	FILE *fout = xfopen(outfile, "wb");
@@ -2555,6 +2579,11 @@ void RNNPG::saveNet(const char *outfile)
 	fclose(fout);
 }
 
+/**
+ * @brief
+ * 向文件中保存神经网络中的每个神经元
+ * @param fout 保存模型的文件指针
+ */
 void RNNPG::saveNeuron(FILE *fout)
 {
 	int i, j, N, unitNum;
@@ -2673,6 +2702,11 @@ void RNNPG::loadNeuron(FILE *fin)
 		fscanf(fin, "%lf %lf", &outNeu[i].ac, &outNeu[i].er);
 }
 
+/**
+ * @brief
+ * 将一些基本的设置保存到文件里
+ * @param fout 文件输出指针
+ */
 void RNNPG::saveBasicSetting(FILE *fout)
 {
 	fprintf(fout, "alpha:%.16g\n", alpha);
