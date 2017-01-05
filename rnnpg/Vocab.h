@@ -136,6 +136,11 @@ public:
 		for(int i = 0; i < vocabSize; i ++)
 			hash[findPos(vocab[i].wd)] = i;
 	}
+	/**
+	 * @brief
+	 * 保存词汇表到文件，包含词，词频，词类
+	 * @param fout 文件输出指针
+	 */
 	void save(FILE *fout)
 	{
 		fprintf(fout, "max vocabulary size:%d\n", maxVocabSize);
