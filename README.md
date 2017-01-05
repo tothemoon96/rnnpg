@@ -1,4 +1,4 @@
-# Chinese Poetry Generation with Recurrent Neural Networks
+﻿# Chinese Poetry Generation with Recurrent Neural Networks
 This project includes the code/model for the paper 
 
 [Chinese Poetry Generation with Recurrent Neural Networks](http://aclweb.org/anthology/D/D14/D14-1074.pdf)
@@ -26,43 +26,37 @@ We would like to thank Tomas Mikolov for making his code public available.
 Download the complete dataset from [here](http://homepages.inf.ed.ac.uk/mlap/Data/EMNLP14/)
 
 # Dependencies
-* [KenLM](https://kheafield.com/code/kenlm/)
+* [KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)
 * G++ (4.4.7)
 * Java (1.8.0_51, 1.6 or 1.7 should also be fine)
 * Python (2.7)
 
 # Installation
-1) Install [KenLM](https://kheafield.com/code/kenlm/). Also remember to add kenlm to your LD_LIBRARY_PATH
+1) Install [KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)，并将[KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)回退到合适的版本：
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/afs/inf.ed.ac.uk/user/s12/s1270921/usr/kenlm/lib
+git reset --hard C090f0bff25d0761bdcf9c1700e37f898c3c029c
 ```
-2) Go to *rnnpg* folder and modify the Makefile (see below). Direct `INCLUDES` and `LDFLAGS` to your KenLM library. Also modify the Makefiles in *rnnpg-decoder* and *rnnpg-generator*.
-
-3) Make everything by ./INSTALL.sh
+Also remember to add kenlm to your KENLM_PATH
 ```
-OUT_EXEC = rnnpg 
-OBJS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-
-CC = g++
-CPPFLAGS = -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pipe -DKENLM_MAX_ORDER=6
-
-INCLUDES = -I/afs/inf.ed.ac.uk/user/s12/s1270921/usr/kenlm
-LDFLAGS = -L/afs/inf.ed.ac.uk/user/s12/s1270921/usr/kenlm/lib -lkenlm
-
-all : $(OUT_EXEC)
-	rm *.o
-
-$(OUT_EXEC) : $(OBJS)
-	$(CC) -o $@ $^ $(INCLUDES) $(LDFLAGS)
-
-%.o : %.cpp
-	$(CC) $(CPPFLAGS) -c $< -o $@ $(INCLUDES)
-
-clean:
-	rm -f *.o
-	rm -f $(OUT_EXEC)
-
+# 你的kenlm的目录，例如 
+export KENLM_PATH=/home/tothemoon/Project/rnnpg/kenlm
 ```
+2) 在项目根目录下执行make
+
++ Debug版：
+```
+make -j4 debug
+```
++ Release版：
+```
+make -j4 release
+```
+3) 执行清理工作
+```
+make clean
+```
+
+
 
 # Run Experiments
 Download data/model from [here](https://drive.google.com/file/d/0B6-YKFW-MnbOYnJDeWVXRnlObzA/view?usp=sharing)
