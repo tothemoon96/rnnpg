@@ -2039,6 +2039,10 @@ void RNNPG::initBackup()
 	outConditionDSyn_backup = (synapse*)xmalloc(M * sizeof(synapse));
 }
 
+/**
+ * @brief
+ * 将训练过程中的当前的模型的权重矩阵和神经元拷贝到内存中的一个区域中，暂时保存起来
+ */
 void RNNPG::saveWeights()
 {
 	int i = -1, j = -1, M = -1, N = -1, unitNum;
@@ -2152,6 +2156,10 @@ void RNNPG::saveWeights()
 		outConditionDSyn_backup[i].weight = outConditionDSyn[i].weight;
 }
 
+/**
+ * @brief
+ * 与saveWeights()的过程相反，用内存里保存的模型覆盖当前的模型
+ */
 void RNNPG::restoreWeights()
 {
 	int i = -1, j = -1, M = -1, N = -1, unitNum;
@@ -2379,6 +2387,7 @@ void RNNPG::trainNet()
 
 		logp = validationLogp;
 
+		//如果模型的误差改变已经很小了，恢复上一次训练的模型，否则拷贝模型到内存的一个区域之中
 		if (logp*minImprovement < lastLogp)
 			restoreWeights();
 		else

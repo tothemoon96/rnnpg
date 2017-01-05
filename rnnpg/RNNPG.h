@@ -161,9 +161,9 @@ private:
 	//i|			   |
 	//z|			   |
 	//e|			   |
-	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组
-	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，先得到更新的Offset，再进行L2正则化
-	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的
+	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组，保存每一层的卷积核C^{l,n}_{:,i}
+	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，用于卷积核的更新，先得到更新的Offset，再进行L2正则化
+	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的</s>
 	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层,CSM不考虑</s>
 	// senNeu指针数组中每一个指针所指向的数据的存储结构，sen7Neu和sen5Neu的unitNum不同
 	// |--unitNum---|
@@ -177,8 +177,8 @@ private:
 	//i|			|
 	//z|			|
 	//e|			|
-	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元
-	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元
+	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元，对应于T_{:,j+i-1}^l
+	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元，对应于T_{:,j+i-1}^l
 	// compressSyn的存储结构
 	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
 	//h|																	|
