@@ -99,7 +99,7 @@ int split(string str, const char *sep, vector<string>& fields)
  * @brief
  * 设置fin指针到mark字符之后的一个字符，也就是说mark作为一个分隔符，要读取mark字符之后的内容
  * @param mark 分隔符
- * @param fin 文件指针
+ * @param fin 读入文件的文件指针
  */
 void skiputil(int mark, FILE *fin)
 {

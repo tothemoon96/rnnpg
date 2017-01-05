@@ -2419,11 +2419,21 @@ void RNNPG::trainNet()
 }
 
 // outConditionDSyn still missing
+/**
+ * @brief
+ * 保存
+ * ->CSM卷积核C_{:,i}^{l,n}，Word embedding矩阵L
+ * ->RCM的M矩阵，5言诗和7言诗的U_j
+ * ->RGM的R矩阵，X矩阵，H矩阵，Y矩阵（词、词类）
+ * ->直接使用RCM的u_i^j生成词的
+ * @param fout 输出文件的文件指针outConditionDSyn矩阵
+ */
 void RNNPG::saveSynapse(FILE *fout)
 {
 	int i, j, N;
 	for(i = 0; i < MAX_CON_N; i ++)
 	{
+		//第几层的卷积核，原始诗句是第0层
 		fprintf(fout, "convolutional matrix %d:\n", i);
 		N = hiddenSize * conSeq[i];
 		for(j = 0; j < N; j ++)
@@ -2536,7 +2546,7 @@ void RNNPG::loadSynapse(FILE *fin)
 /**
  * @brief
  * 从文件中载入整个网络
- * @param infile
+ * @param infile 保存模型的文件路径
  */
 void RNNPG::loadNet(const char *infile)
 {
@@ -2682,6 +2692,11 @@ void RNNPG::loadNeuron(FILE *fin)
 		fscanf(fin, "%lf %lf", &outNeu[i].ac, &outNeu[i].er);
 }
 
+/**
+ * @brief
+ * 将一些基本的设置保存到文件里
+ * @param fout 文件输出指针
+ */
 void RNNPG::saveBasicSetting(FILE *fout)
 {
 	fprintf(fout, "alpha:%.16g\n", alpha);
