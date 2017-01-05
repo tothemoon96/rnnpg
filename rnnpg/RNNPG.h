@@ -74,7 +74,7 @@ struct synapse {
 const int MAX_CON_N = 4;
 //参见论文里卷积神经网络C每一层卷积核大小
 const int conSeq[MAX_CON_N] = { 2, 2, 3, 3 };  // convolution sequence
-const int MAX_PATH_LENGTH = 256;
+const int MAX_PATH_LENGTH = 256;//文件操作里最大路径长度
 
 class RNNPG
 {
@@ -210,7 +210,7 @@ private:
 	//i|								|
 	//z|								|
 	//e|								|
-	synapse *senweSyn;		// the word embedding matrix in sentence model. This can be modified during training. We can inilizate it with word2vec word embedding, or just randomly
+	synapse *senweSyn;		// the word embedding matrix in sentence model. This can be modified during training. We can inilizate it with word2vec word embedding, or just randomly,CSM里的L矩阵
 
 	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
 	neuron *hiddenNeu;//对应于RGM的隐含层r_j
@@ -255,8 +255,8 @@ private:
 	//|							   |
 	//|							   |
 	synapse *outHiddenSyn;
-	int classSize;
-	Word *voc_arr;
+	int classSize;//词类的数目
+	Word *voc_arr;//保存字符表的信息
 	int *classStart;//一个int数组，数组中的每个元素对应于V中该类词的开始的编号
 	int *classEnd;//一个int数组，数组中的每个元素对应于V中该类词结束的编号+1
 
@@ -363,8 +363,8 @@ private:
 	double minImprovement;
 	int alphaDivide;
 	int saveModel;
-	double stableAC;
-	double historyStableAC;
+	double stableAC;//在flushNet()中，设置r_{j-1}的值
+	double historyStableAC;//在训练过程中，使用historyStableAC设置CSM的h_0
 	int flushOption;
 	enum FLUSH_OPTION{EVERY_SENTENCE = 1, EVERY_POEM = 2, NEVER = 3};
 	double consynMin;

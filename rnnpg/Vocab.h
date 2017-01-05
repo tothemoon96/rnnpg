@@ -24,7 +24,7 @@ using namespace std;
 #include "xutil.h"
 
 const int HASH_SIZE = 1000003;
-const int WDLEN = 10;	// this is for Chinese character, so it is enough
+const int WDLEN = 10;	// this is for Chinese character, so it is enough，一个中文字符最多占用多少B
 
 struct Word
 {
