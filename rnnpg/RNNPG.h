@@ -215,7 +215,7 @@ private:
 	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
 	neuron *hiddenNeu;//对应于RGM的隐含层r_j
 	neuron *outNeu;//前V个神经元表示的是P(word|word_class,context)，后面classSize个神经元表示的是P(word_class,context)
-	//hiddenInSyn的存储结构
+	//hiddenInSyn的存储结构,word embedding部分是随机初始化的
 	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
 	//h|								|					|				    |
 	//i|								|					|				    |
@@ -365,7 +365,10 @@ private:
 	int saveModel;
 	double stableAC;//在flushNet()中，设置r_{j-1}的值
 	double historyStableAC;//在训练过程中，使用historyStableAC设置CSM的h_0
-	int flushOption;
+	// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+	// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+	// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
+	int flushOption;//只可以设置成FLUSH_OPTION中的枚举变量
 	enum FLUSH_OPTION{EVERY_SENTENCE = 1, EVERY_POEM = 2, NEVER = 3};
 	double consynMin;
 	double consynMax;
@@ -394,7 +397,7 @@ private:
 	// neuron *bufOutConditionNeu_backup;		// backup
 
 	/**
-	 * This is for adagrad
+	 * addgrad使用的数据结构，This is for adagrad
 	 */
 	struct SumGradSquare
 	{
@@ -424,6 +427,11 @@ private:
 //			outHiddenSyn_= NULL;
 //		}
 
+		/**
+		 * @brief
+		 * 为模型中用到的权重矩阵的SumGradSquare创建空间并填入初值
+		 * @param rnnpg
+		 */
 		void init(RNNPG *rnnpg)
 		{
 			int hiddenSize = rnnpg->hiddenSize;
@@ -469,6 +477,11 @@ private:
 			fill(outHiddenSyn_, N, sumGradSqInitVal);
 		}
 
+		/**
+		 * @brief
+		 * 为模型中用到的权重矩阵的SumGradSquare重设初值
+		 * @param rnnpg
+		 */
 		void reset(RNNPG *rnnpg)
 		{
 			int hiddenSize = rnnpg->hiddenSize;
@@ -503,11 +516,23 @@ private:
 			fill(outHiddenSyn_, N, sumGradSqInitVal);
 		}
 
+		/**
+		 * @brief
+		 * 向arr这个double数组指针中填入size个val数据
+		 * @param arr 开始填入数据的地址
+		 * @param size 填入多少个数据
+		 * @param val 填入数据的值
+		 */
 		void fill(double *arr, int size, double val)
 		{
 			for(int i = 0; i < size; i ++)
 				arr[i] = val;
 		}
+
+		/**
+		 * @brief
+		 * 释放内存空间
+		 */
 		void releaseMemory()
 		{
 			int i, M;

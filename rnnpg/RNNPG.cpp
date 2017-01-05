@@ -386,6 +386,7 @@ void RNNPG::initNet()
 		}
 		else
 		{
+			//使用word embedding初始化senweSyn
 			if(voc_arr == NULL) voc_arr = vocab.getVocab();
 			int V = vocab.getVocabSize();
 			double *embed = new double[hiddenSize];
@@ -666,6 +667,7 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 	matrixXvector(conditionNeu, hisNeu, mapSyn[wordPos], hiddenSize, 0, hiddenSize, 0, hiddenSize, 0);
 	funACNeurons(conditionNeu, hiddenSize);
 	int V = vocab.getVocabSize();
+	// 将u_i^j拷贝到inNeu中
 	memcpy(inNeu + V, conditionNeu, hiddenSize * sizeof(neuron));
 	// go back later...
 
@@ -1820,6 +1822,9 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 
 		// generation ...
 		// initSent(words.size());
+		// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+		// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+		// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
 		if(flushOption == EVERY_SENTENCE)
 			flushNet();		// clear input hidden and output layer
 		else if(flushOption == EVERY_POEM)
@@ -1850,6 +1855,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 			else
 				learnNetAdaGrad(lastWord, curWord, wdPos, words.size() - 1);
 			inNeu[lastWord].ac = 0;
+			// 将r_{j-1}的ac拷贝到r_j中
 			copyHiddenLayerToInput();
 			lastWord = curWord;
 		}
@@ -1917,6 +1923,9 @@ void RNNPG::testPoem(const vector<string> &sentences)
 		// generation ...
 		// initSent(words.size());
 		// flushNet();		// clear input hidden and output layer
+		// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+		// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+		// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
 		if(flushOption == EVERY_SENTENCE)
 			flushNet();		// clear input hidden and output layer
 		else if(flushOption == EVERY_POEM)
@@ -2276,7 +2285,7 @@ void RNNPG::restoreWeights()
 /**
  * @brief
  * 使用一个保存诗的文件进行测试
- * @param testF 文件路径
+ * @param testF 测试数据集的文件路径
  */
 void RNNPG::testNetFile(const char *testF)
 {
@@ -2330,6 +2339,7 @@ void RNNPG::trainNet()
 		FILE *fin = xfopen(trainFile, "r", "computeNet -- open trainFile");
 		int poem_cnt = 0;
 		flushNet();		// for each interation, flush the net first
+		//将训练文件从头读到尾
 		while(fgets(buf,sizeof(buf),fin))	// one line is one poem, and one line will NOT exceed 1023 chars
 		{
 			sentences.clear();
@@ -2387,13 +2397,13 @@ void RNNPG::trainNet()
 
 		logp = validationLogp;
 
-		//如果模型的误差改变已经很小了，恢复上一次训练的模型，否则拷贝模型到内存的一个区域之中
+		//针对的是验证集，如果模型的误差改变已经很小了，恢复上一次训练的模型，否则拷贝模型到内存的一个区域之中
 		if (logp*minImprovement < lastLogp)
 			restoreWeights();
 		else
 			saveWeights();
 
-		//对数似然*最小的进步小于lastLogp就停止训练，换句话说，就是训练过程中误差的改变已经比较小了，这个时候有两部，一是降低学习率，如果已经降低之后模型得到的改进还是很小，那么停止训练
+		//针对的是验证集，对数似然*最小的进步小于lastLogp就停止训练，换句话说，就是训练过程中误差的改变已经比较小了，这个时候有两部，一是降低学习率，如果已经降低之后模型得到的改进还是很小，那么停止训练
 		if (logp*minImprovement < lastLogp)
 		{   //***maybe put some variable here to define what is minimal improvement??
 			if (alphaDivide == 0)
