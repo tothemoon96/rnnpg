@@ -631,7 +631,7 @@ void RNNPG::assignClassLabel()
 	classStart[0] = 0;
 	for(i = 0; i < V; i ++)
 	{
-		//prob某个词出现的概率，voc_arr里的词是按照出现频率由低到高进行排序的
+		//prob某个词出现的概率
 		prob += voc_arr[i].freq / (double)tot_freq;
 		if(prob > 1) prob = 1;
 		voc_arr[i].classIndex = classIndex;
@@ -2533,14 +2533,23 @@ void RNNPG::loadSynapse(FILE *fin)
 		fscanf(fin, "%lf", &outConditionDSyn[i].weight);
 }
 
+/**
+ * @brief
+ * 从文件中载入整个网络
+ * @param infile
+ */
 void RNNPG::loadNet(const char *infile)
 {
 	FILE *fin = xfopen(infile, "rb");
+	//载入基础设置
 	loadBasicSetting(fin);
+	//载入词汇表
 	vocab.load(fin);
 	if(inNeu == NULL)
 		initNet();
+	//载入权重矩阵
 	loadSynapse(fin);
+	//载入每个神经单元
 	loadNeuron(fin);
 	fclose(fin);
 }
