@@ -2418,7 +2418,7 @@ void RNNPG::trainNet()
 	}
 }
 
-// outConditionDSyn still missing
+// 在目前的版本中已经保存了outConditionDSyn，这是早期的注释，outConditionDSyn still missing
 /**
  * @brief
  * 保存
@@ -2491,7 +2491,7 @@ void RNNPG::saveSynapse(FILE *fout)
 	fprintf(fout, "\n\n");
 }
 
-// outConditionDSyn still missing
+// 在目前的版本中已经读取了outConditionDSyn，这是早期的注释，outConditionDSyn still missing
 void RNNPG::loadSynapse(FILE *fin)
 {
 	int i, j, N;
@@ -2564,6 +2564,11 @@ void RNNPG::loadNet(const char *infile)
 	fclose(fin);
 }
 
+/**
+ * @brief
+ * 保存整个神经网络模型到文件中
+ * @param outfile 存储模型的文件路径
+ */
 void RNNPG::saveNet(const char *outfile)
 {
 	FILE *fout = xfopen(outfile, "wb");
@@ -2574,6 +2579,11 @@ void RNNPG::saveNet(const char *outfile)
 	fclose(fout);
 }
 
+/**
+ * @brief
+ * 向文件中保存神经网络中的每个神经元
+ * @param fout 保存模型的文件指针
+ */
 void RNNPG::saveNeuron(FILE *fout)
 {
 	int i, j, N, unitNum;
