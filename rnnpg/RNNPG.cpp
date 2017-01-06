@@ -386,6 +386,7 @@ void RNNPG::initNet()
 		}
 		else
 		{
+			//使用word embedding初始化senweSyn
 			if(voc_arr == NULL) voc_arr = vocab.getVocab();
 			int V = vocab.getVocabSize();
 			double *embed = new double[hiddenSize];
@@ -666,6 +667,7 @@ void RNNPG::computeNet(int lastWord, int curWord, int wordPos, synapse **mapSyn)
 	matrixXvector(conditionNeu, hisNeu, mapSyn[wordPos], hiddenSize, 0, hiddenSize, 0, hiddenSize, 0);
 	funACNeurons(conditionNeu, hiddenSize);
 	int V = vocab.getVocabSize();
+	// 将u_i^j拷贝到inNeu中
 	memcpy(inNeu + V, conditionNeu, hiddenSize * sizeof(neuron));
 	// go back later...
 
@@ -1056,7 +1058,7 @@ void RNNPG::learnSentBPTT(int senLen)
 
 /**
  * @brief
- * 学习整个网络的过程
+ * 学习整个网络的过程，使用SGD
  * 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
  * @param lastWord 上一个词对应于词表中的ID
  * @param curWord 当前词对应于词表中的ID
@@ -1467,8 +1469,18 @@ void RNNPG::learnSentAdaGrad(int senLen)
 	}
 }
 
+/**
+ * @brief
+ * 学习整个网络的过程，使用AdaGrad
+ * 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
+ * @param lastWord 上一个词对应于词表中的ID
+ * @param curWord 当前词对应于词表中的ID
+ * @param wordPos 正在处理的一个词在一句诗里的位置
+ * @param senLen 诗句的长度，不包含结尾的定界符"</s>"
+ */
 void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 {
+	//------这里和learnNet相同(Start)------
 	double beta2 = alpha * beta;
 	int curClassIndex = voc_arr[curWord].classIndex, i = 0, j = 0, V = vocab.getVocabSize(), N = 0, offset = 0;
 	// error at output layer. 1. error on words
@@ -1502,16 +1514,17 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 
 	// updating the matrix outHiddenSyn, since we already have the error at output layer and the activation in the hidden layer
 	// we update the weight per word rather than per sentence for faster increase in likelihood. Perhaps it will be modified to per sentence update later
-	// update submatrix of words to hidden layer
+	// update submatrix of words to hidden layer,更新对应于相应类别的词的Y矩阵
 	offset = classStart[curClassIndex] * hiddenSize;
 	for(i = classStart[curClassIndex]; i < classEnd[curClassIndex]; i ++)
 	{
+		//------这里和learnNet相同(End)------
 		for(j = 0; j < hiddenSize; j ++)
 		{
 			double grad = outNeu[i].er * hiddenNeu[j].ac;
 			sumGradSquare.outHiddenSyn_[offset + j] += grad * grad;
 			double move = alpha * grad / (sqrt(sumGradSquare.outHiddenSyn_[offset + j]) + adaGradEps);
-
+			//每学习10个字正则化一次
 			if(wordCounter % 10 == 0)
 				outHiddenSyn[offset + j].weight += move - beta2*outHiddenSyn[offset + j].weight;
 			else
@@ -1523,7 +1536,7 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 //			for(j = 0; j < hiddenSize; j ++) outHiddenSyn[offset + j].weight += alpha * outNeu[i].er * hiddenNeu[j].ac;
 		offset += hiddenSize;
 	}
-	// update submatrix of classes to hidden layer
+	// update submatrix of classes to hidden layer，更新相应类别的Y矩阵
 	N = V + classSize;
 	offset = V * hiddenSize;
 	for(i = V; i < N; i ++)
@@ -1534,6 +1547,7 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 			sumGradSquare.outHiddenSyn_[offset + j] += grad * grad;
 			double move = alpha * grad / (sqrt(sumGradSquare.outHiddenSyn_[offset + j]) + adaGradEps);
 
+			//每学习10个字正则化一次
 			if(wordCounter % 10 == 0)
 				outHiddenSyn[offset + j].weight += move - beta2*outHiddenSyn[offset + j].weight;
 			else
@@ -1546,6 +1560,7 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 		offset += hiddenSize;
 	}
 
+	//如果只使用RCM进行生成，不使用AdaGrad来进行优化，还是使用原始的SGD
 	if(directError)
 	{
 		// update the matrix outConditionDSyn
@@ -1575,17 +1590,19 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 		}
 	}
 
-	// this is for back propagation through time
+	// this is for back propagation through time，开始BPTT过程了
 	bpttHistory[wordPos] = lastWord;	// store the last word
 	memcpy(bpttHiddenNeu + (wordPos * hiddenSize), hiddenNeu, sizeof(neuron)*hiddenSize);	// store the hidden layer
 	memcpy(bpttInHiddenNeu + (wordPos * hiddenSize), inNeu + (V + hiddenSize), sizeof(neuron)*hiddenSize);	// store the hidden units in input layer (previous hidden layer)
 	memcpy(bpttConditionNeu + (wordPos * hiddenSize), inNeu + V, sizeof(neuron)*hiddenSize);	// store the condition units in input layer
+	// 如果还没有到一句诗的结尾，就什么都不干，说明Y是对每个字都更新，而其他的参数是对每句诗做更新
 	if(curWord != 0)
 		return;
-	// if this is the end of sentence, then let's do it
-	int lword = -1, layer1Size = V + hiddenSize + hiddenSize;
+	// if this is the end of sentence, then let's do it，此时wordPos=诗句的长度+1
+	int lword = -1, layer1Size = V + hiddenSize + hiddenSize;//lword表示正在处理的词的上一个词的ID
 	synapse **mapSyn = NULL;
 	mapSyn = senLen == 5 ? map5Syn : map7Syn;
+	//　选择合适的平方梯度累计矩阵
 	double **mapSyn_ = senLen == 5 ? sumGradSquare.map5Syn_ : sumGradSquare.map7Syn_;
 	for(int step = wordPos; step >= 0; step --)
 	{
@@ -1627,10 +1644,12 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 		if(perSentUpdate)
 			clearNeurons(hisNeu, hiddenSize, 2);
 
-		// watch that the error in hisNeu must be inilizated to zero at the beginning of dealing with each sentence
+		// 注意之前只有在perSentUpdate时才清空，如果不是perSentUpdate，这里误差将会累积下去，等这一句话接受之后一起向前传递，watch that the error in hisNeu must be inilizated to zero at the beginning of dealing with each sentence
 		matrixXvector(hisNeu, inNeu + V, mapSyn[step], hiddenSize, 0, hiddenSize, 0, hiddenSize, 1);
 
 		// acumulate deviations for map matrix
+		// 每10个字做一次正则化
+		// 训练U_j矩阵
 		for(i = 0; i < hiddenSize; i ++)
 			for(j = 0; j < hiddenSize; j ++)
 			{
@@ -1656,8 +1675,10 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 //		}
 
 		if(perSentUpdate)
+			// 训练RCM,和CSM
 			learnSent(senLen);
 
+		// 当已经到了第一个词的时候，做上面的步骤，不做下面的步骤，避免越界
 		if(step == 0) continue;
 		// propagate error to previous layer
 		for(i = 0; i < hiddenSize; i ++)
@@ -1751,6 +1772,7 @@ void RNNPG::learnNetAdaGrad(int lastWord, int curWord, int wordPos, int senLen)
 //		else
 //			learnSentBPTT(senLen);
 //	}
+	//这里好像有bug，尽量把perSentUpdate设置成０
 	learnSentAdaGrad(senLen);
 }
 
@@ -1820,6 +1842,9 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 
 		// generation ...
 		// initSent(words.size());
+		// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+		// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+		// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
 		if(flushOption == EVERY_SENTENCE)
 			flushNet();		// clear input hidden and output layer
 		else if(flushOption == EVERY_POEM)
@@ -1850,6 +1875,7 @@ void RNNPG::trainPoem(const vector<string> &sentences)
 			else
 				learnNetAdaGrad(lastWord, curWord, wdPos, words.size() - 1);
 			inNeu[lastWord].ac = 0;
+			// 将r_{j-1}的ac拷贝到r_j中
 			copyHiddenLayerToInput();
 			lastWord = curWord;
 		}
@@ -1917,6 +1943,9 @@ void RNNPG::testPoem(const vector<string> &sentences)
 		// generation ...
 		// initSent(words.size());
 		// flushNet();		// clear input hidden and output layer
+		// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+		// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+		// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
 		if(flushOption == EVERY_SENTENCE)
 			flushNet();		// clear input hidden and output layer
 		else if(flushOption == EVERY_POEM)
@@ -2039,6 +2068,10 @@ void RNNPG::initBackup()
 	outConditionDSyn_backup = (synapse*)xmalloc(M * sizeof(synapse));
 }
 
+/**
+ * @brief
+ * 将训练过程中的当前的模型的权重矩阵和神经元拷贝到内存中的一个区域中，暂时保存起来
+ */
 void RNNPG::saveWeights()
 {
 	int i = -1, j = -1, M = -1, N = -1, unitNum;
@@ -2152,6 +2185,10 @@ void RNNPG::saveWeights()
 		outConditionDSyn_backup[i].weight = outConditionDSyn[i].weight;
 }
 
+/**
+ * @brief
+ * 与saveWeights()的过程相反，用内存里保存的模型覆盖当前的模型
+ */
 void RNNPG::restoreWeights()
 {
 	int i = -1, j = -1, M = -1, N = -1, unitNum;
@@ -2268,7 +2305,7 @@ void RNNPG::restoreWeights()
 /**
  * @brief
  * 使用一个保存诗的文件进行测试
- * @param testF 文件路径
+ * @param testF 测试数据集的文件路径
  */
 void RNNPG::testNetFile(const char *testF)
 {
@@ -2322,6 +2359,7 @@ void RNNPG::trainNet()
 		FILE *fin = xfopen(trainFile, "r", "computeNet -- open trainFile");
 		int poem_cnt = 0;
 		flushNet();		// for each interation, flush the net first
+		//将训练文件从头读到尾
 		while(fgets(buf,sizeof(buf),fin))	// one line is one poem, and one line will NOT exceed 1023 chars
 		{
 			sentences.clear();
@@ -2379,12 +2417,13 @@ void RNNPG::trainNet()
 
 		logp = validationLogp;
 
+		//针对的是验证集，如果模型的误差改变已经很小了，恢复上一次训练的模型，否则拷贝模型到内存的一个区域之中
 		if (logp*minImprovement < lastLogp)
 			restoreWeights();
 		else
 			saveWeights();
 
-		//对数似然*最小的进步小于lastLogp就停止训练，换句话说，就是训练过程中误差的改变已经比较小了，这个时候有两部，一是降低学习率，如果已经降低之后模型得到的改进还是很小，那么停止训练
+		//针对的是验证集，对数似然*最小的进步小于lastLogp就停止训练，换句话说，就是训练过程中误差的改变已经比较小了，这个时候有两部，一是降低学习率，如果已经降低之后模型得到的改进还是很小，那么停止训练
 		if (logp*minImprovement < lastLogp)
 		{   //***maybe put some variable here to define what is minimal improvement??
 			if (alphaDivide == 0)
