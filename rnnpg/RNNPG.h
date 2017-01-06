@@ -374,7 +374,7 @@ private:
 	double consynMax;
 	double consynOffset;
 	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
-	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
+	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM，如果为０，则是在RGM训练完了一整句诗之后，在训练RCM和CSM，使不使用BPTT由conbptt来决定，对于learnNetAdaGrad()来说好像有bug(尽量设成０)，无论conbptt如何设置，都不会使用bptt来训练RCM和CSM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup
@@ -402,6 +402,7 @@ private:
 	struct SumGradSquare
 	{
 		// double sumGradSqInitVal;
+		//　这些指针里存储的都是对应的矩阵的累计的梯度的平方
 		double *conSyn_[MAX_CON_N];
 		double *compressSyn_;
 		double *map7Syn_[8];
@@ -555,7 +556,7 @@ private:
 		}
 	}sumGradSquare;
 	bool adaGrad;
-	double adaGradEps;
+	double adaGradEps;//一个很小的量，防止被０除
 
 	// private functions
 	neuron* sen2vec(const vector<string> &senWords, neuron **senNeu, int SEN_HIGHT);
