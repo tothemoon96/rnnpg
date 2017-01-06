@@ -161,9 +161,9 @@ private:
 	//i|			   |
 	//z|			   |
 	//e|			   |
-	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组
-	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，先得到更新的Offset，再进行L2正则化
-	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的
+	synapse *conSyn[MAX_CON_N];			 	 // convolution matrix，这里是一个指针数组，保存每一层的卷积核C^{l,n}_{:,i}
+	synapse *conSynOffset[MAX_CON_N];		 // when update convolution matrix, we need to compute the offset first and then add the L2 norm term，用于卷积核的更新，先得到更新的Offset，再进行L2正则化
+	enum SEN_LENGTH {SEN5_LENGTH = 5, SEN7_LENGTH = 7};//对应的是诗歌句子的长度，不考虑结尾的</s>
 	enum SEN_TREE_HIGHT{SEN5_HIGHT = 4, SEN7_HIGHT = 5};//CSM：五言诗只有4层，七言诗有5层,CSM不考虑</s>
 	// senNeu指针数组中每一个指针所指向的数据的存储结构，sen7Neu和sen5Neu的unitNum不同
 	// |--unitNum---|
@@ -177,8 +177,8 @@ private:
 	//i|			|
 	//z|			|
 	//e|			|
-	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元
-	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元
+	neuron *sen7Neu[SEN7_HIGHT];//CSM网络中对应于7言诗的神经元，对应于T_{:,j+i-1}^l
+	neuron *sen5Neu[SEN5_HIGHT];//CSM网络中对应于5言诗的神经元，对应于T_{:,j+i-1}^l
 	// compressSyn的存储结构
 	// |----hiddenSize（对应于h_{i-1}）------|-----hiddenSize（对应于v_i）-----|
 	//h|																	|
@@ -215,7 +215,7 @@ private:
 	neuron *inNeu;//对应于RGM中的输入层，其中0到V-1存储的是词的one-hot，V到V+hiddenSize-1存储的是u_i^j，V+hiddenSize到V+hiddenSize*2-1存储的是r_{j-1}
 	neuron *hiddenNeu;//对应于RGM的隐含层r_j
 	neuron *outNeu;//前V个神经元表示的是P(word|word_class,context)，后面classSize个神经元表示的是P(word_class,context)
-	//hiddenInSyn的存储结构
+	//hiddenInSyn的存储结构,word embedding部分是随机初始化的
 	// |-----V(word embedding矩阵)------|---hiddenSize(H)---|---hiddenSize(R)---|
 	//h|								|					|				    |
 	//i|								|					|				    |
@@ -365,13 +365,16 @@ private:
 	int saveModel;
 	double stableAC;//在flushNet()中，设置r_{j-1}的值
 	double historyStableAC;//在训练过程中，使用historyStableAC设置CSM的h_0
-	int flushOption;
+	// 这两个flushOption的最大的区别就是r_{j-1}会不会传递到下一句诗之中
+	// 当设置成EVERY_POEM时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是生成上一句诗的最后一个字的r_j
+	// 当设置成EVERY_SENTENCE时：生成下一句诗的第一个字的时候inNeu中的r_{j-1}是stableAC
+	int flushOption;//只可以设置成FLUSH_OPTION中的枚举变量
 	enum FLUSH_OPTION{EVERY_SENTENCE = 1, EVERY_POEM = 2, NEVER = 3};
 	double consynMin;
 	double consynMax;
 	double consynOffset;
 	bool directError;//如果为1，这个好像是控制直接使用RCM去生成，如果为0，考虑RCM和RGM
-	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM
+	bool perSentUpdate;//如果为1，读入一整句诗之后，对每个词在训练RGM的同时，都会训练RCM和CSM，同时不会使用BPTT来训练CSM和RCM，如果为０，则是在RGM训练完了一整句诗之后，在训练RCM和CSM，使不使用BPTT由conbptt来决定，对于learnNetAdaGrad()来说好像有bug(尽量设成０)，无论conbptt如何设置，都不会使用bptt来训练RCM和CSM
 
 	// backups
 	synapse *conSyn_backup[MAX_CON_N];			 	 // convolution matrix	// backup
@@ -394,11 +397,12 @@ private:
 	// neuron *bufOutConditionNeu_backup;		// backup
 
 	/**
-	 * This is for adagrad
+	 * addgrad使用的数据结构，This is for adagrad
 	 */
 	struct SumGradSquare
 	{
 		// double sumGradSqInitVal;
+		//　这些指针里存储的都是对应的矩阵的累计的梯度的平方
 		double *conSyn_[MAX_CON_N];
 		double *compressSyn_;
 		double *map7Syn_[8];
@@ -424,6 +428,11 @@ private:
 //			outHiddenSyn_= NULL;
 //		}
 
+		/**
+		 * @brief
+		 * 为模型中用到的权重矩阵的SumGradSquare创建空间并填入初值
+		 * @param rnnpg
+		 */
 		void init(RNNPG *rnnpg)
 		{
 			int hiddenSize = rnnpg->hiddenSize;
@@ -469,6 +478,11 @@ private:
 			fill(outHiddenSyn_, N, sumGradSqInitVal);
 		}
 
+		/**
+		 * @brief
+		 * 为模型中用到的权重矩阵的SumGradSquare重设初值
+		 * @param rnnpg
+		 */
 		void reset(RNNPG *rnnpg)
 		{
 			int hiddenSize = rnnpg->hiddenSize;
@@ -503,11 +517,23 @@ private:
 			fill(outHiddenSyn_, N, sumGradSqInitVal);
 		}
 
+		/**
+		 * @brief
+		 * 向arr这个double数组指针中填入size个val数据
+		 * @param arr 开始填入数据的地址
+		 * @param size 填入多少个数据
+		 * @param val 填入数据的值
+		 */
 		void fill(double *arr, int size, double val)
 		{
 			for(int i = 0; i < size; i ++)
 				arr[i] = val;
 		}
+
+		/**
+		 * @brief
+		 * 释放内存空间
+		 */
 		void releaseMemory()
 		{
 			int i, M;
@@ -530,7 +556,7 @@ private:
 		}
 	}sumGradSquare;
 	bool adaGrad;
-	double adaGradEps;
+	double adaGradEps;//一个很小的量，防止被０除
 
 	// private functions
 	neuron* sen2vec(const vector<string> &senWords, neuron **senNeu, int SEN_HIGHT);
