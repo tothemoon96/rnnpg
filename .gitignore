@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+*.class
 
 # Project specified files
 first-sentence-generator/first-sent
