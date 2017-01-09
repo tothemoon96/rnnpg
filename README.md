@@ -1,5 +1,5 @@
-﻿# Chinese Poetry Generation with Recurrent Neural Networks
-This project includes the code/model for the paper 
+# Chinese Poetry Generation with Recurrent Neural Networks
+This project includes the code/model for the paper
 
 [Chinese Poetry Generation with Recurrent Neural Networks](http://aclweb.org/anthology/D/D14/D14-1074.pdf)
 
@@ -32,18 +32,22 @@ Download the complete dataset from [here](http://homepages.inf.ed.ac.uk/mlap/Dat
 * Python (2.7)
 
 # Installation
-1) Install [KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)，并将[KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)回退到合适的版本：
+(1) Install [KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)，并将[KenLM](https://github.com/XingxingZhang/rnnpg/tree/master)回退到合适的版本：
 ```
 git reset --hard C090f0bff25d0761bdcf9c1700e37f898c3c029c
 ```
 Also remember to add kenlm to your KENLM_PATH
 ```
-# 你的kenlm的目录，例如 
-export KENLM_PATH=/home/tothemoon/Project/rnnpg/kenlm
+# 你的kenlm的目录，例如
+export KENLM_PATH="/home/tothemoon/Project/rnnpg/kenlm"
 ```
-2) 在项目根目录下执行make
+Also remember to add kenlm to your LD_LIBRARY_PATH
+```
+export LD_LIBRARY_PATH="/home/tothemoon/Project/rnnpg/kenlm/lib:$LD_LIBRARY_PATH"
+```
+(2) 在项目根目录下执行make
 
-+ Debug版：
++ Debug版(Debug版运行时还有一些问题 )：
 ```
 make -j4 debug
 ```
@@ -51,7 +55,7 @@ make -j4 debug
 ```
 make -j4 release
 ```
-3) 执行清理工作
+(3) 执行清理工作
 ```
 make clean
 ```
@@ -81,7 +85,7 @@ Enjoy the generated poems!
 
 Download from [here](https://drive.google.com/file/d/0B6-YKFW-MnbORk16WmNXbDhsVk0/view?usp=sharing)
 ```
-tar jxvf BLEU2-final.tar.bz2 
+tar jxvf BLEU2-final.tar.bz2
 cd BLEU2-final
 cd MERT_channel-1_RNN-CB-POS-LM-Eval-BLEU2
 python showBLEU.py .
