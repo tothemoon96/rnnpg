@@ -77,19 +77,19 @@ void cmdLine(int argc, char **argv)
 	FILE *fout = xfopen(outFile, "w", "open output file");
 	int i;
 	clock_t start = clock();
-	int lineNo = 0;
+	int lineNo = 0;// 记录行号
 	while(fgets(buf,sizeof(buf),fin))
 	{
-		char *pos = strchr(buf, '\t');
-		if(pos == NULL) continue;
+		char *pos = strchr(buf, '\t');// 获得第一个出现制表符的位置
+		if(pos == NULL) continue;//　没有制表符说明这一行有问题，跳过
 
 		lineNo ++;
 
-		*pos = 0;
-		vector<string> keywords;
+		*pos = 0;// 将\t替换成\0，也就是标识一个字符串的结尾
+		vector<string> keywords;// 里面存储的是一行的内容
 		split(buf, "*", keywords);
 		int senLen;
-		senLen = atoi(pos + 1);
+		senLen = atoi(pos + 1);// 获取一句话的长度
 		string bufstr = buf;
 		replacein(bufstr, "*", " * ");
 		cout << bufstr << " " << senLen << endl;

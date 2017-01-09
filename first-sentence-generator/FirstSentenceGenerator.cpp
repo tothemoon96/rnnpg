@@ -9,18 +9,27 @@
 
 #include "FirstSentenceGenerator.h"
 
+/**
+ * @brief
+ * 将诗学含英的内容映射成一个map<string,set<string>>的map，map的内容举例如下
+ * {"不 寝":("衾 寒","灯 残",...,"惊 鹊 未 安 枝"),...}
+ * @param infile 诗学含英的文件路径
+ */
 void FirstSentenceGenerator::loadShixuehanying(const char* infile)
 {
 	FILE *fin = xfopen(infile, "r", "load shixuehanying...");
 	char buf[1024*5];
 	while(fgets(buf,sizeof(buf),fin))
 	{
-		if(buf[0] == '<')
+		if(buf[0] == '<')// 如果载入的一行是标识符，那么跳过，载入下一行
 			continue;
 		vector<string> fields;
+		//分割字符串，效果如下
+		//（＂1＂，＂不 寝＂，＂衾 寒*灯 残*虫 鸣*夜 永*枕 冷*月 落*雁 叫*愁 多*俏 俏*漏 月*寒 月 尽*催 诗 急*饥 鼠 眠 床*不 成 蝶 化*残 砧 数 家 月*空 壁 闻 虫 唧*耿 耿*曼 夜*晓 漏 迟*聒 耳 明*惊 乌 啼 月*怕 听 虫 鸣*疏 柳 几 枝 烟*高 楼 过 雁 声*自 知 吟 更 苦*鳏 鱼 不 闭 目*独 有 坐 如 神*惊 鹊 未 安 枝＂）
 		split(buf, "\t\r\n", fields);
-		if(fields.size() != 3) continue;
+		if(fields.size() != 3) continue;//如果不是如上标准格式，则跳过
 		set<string> s;
+		//在上面的例子里，fields[1]是＂不 寝＂
 		shixuehanyingDict[fields[1]] = s;
 		map<string,set<string> >::iterator iter = shixuehanyingDict.find(fields[1]);
 		vector<string> words;
@@ -48,6 +57,12 @@ void FirstSentenceGenerator::printShixuehanying()
 	}
 }
 
+/**
+ * @brief
+ * 使用keywords中的每个词在shixuehanyingDict中查找相应的键,将它填入到candiPhrase中
+ * @param keywords 关键词向量
+ * @param candiPhrase 整合了keywords中每个词的查询结果,全部存入了candiPhrase中
+ */
 void FirstSentenceGenerator::getCandidatePhrase(const vector<string> &keywords, vector<string> &candiPhrase)
 {
 	set<string> s;
@@ -61,6 +76,15 @@ void FirstSentenceGenerator::getCandidatePhrase(const vector<string> &keywords, 
 	candiPhrase.insert(candiPhrase.end(), s.begin(), s.end());
 }
 
+/**
+ * @brief
+ * 根据关键词生成第一句诗
+ * @param keywords　存储关键词的向量，如（＂空　山＂，＂新　雨＂，＂后＂）
+ * @param topK 生成生成概率最大的前topK个句子
+ * @param senLen 生成的句子的长度
+ * @param stackSize
+ * @param topSents 存储生成出的句子的向量
+ */
 void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, int topK, int senLen, int stackSize, vector<string> &topSents)
 {
 	cout << "interploate weight" << endl;
@@ -70,15 +94,19 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	vector<string> candiPhrase;
 	int i, j, k;
 	getCandidatePhrase(keywords, candiPhrase);
+	// 按照字符串的长度有小到大进行排序
 	sort(candiPhrase.begin(), candiPhrase.end(), phrlencmp);
 //	cout << "candi phrase size " << candiPhrase.size() << endl;
 //	for(i = 0; i < candiPhrase.size(); i ++)
 //		cout << candiPhrase[i] << endl;
 	neuron *newHiddenNeu = new neuron[hiddenSize];
+	// stacks是一个指向指针数组的指针，这个指针数组的长度为senLen + 1
 	Stack **stacks = new Stack*[senLen + 1];
 	for(i = 0; i < senLen; i ++)
 		stacks[i] = new Stack(stackSize, hiddenSize);
+	//最后一个元素构造的与众不同
 	stacks[senLen] = new Stack(topK > stackSize ? topK : stackSize, hiddenSize);
+
 	StackItem *sitem = NULL;
 	sitem = new StackItem(hiddenSize);
 	sitem->posInSent = 0;
