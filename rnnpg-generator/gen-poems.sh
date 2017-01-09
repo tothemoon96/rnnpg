@@ -8,5 +8,3 @@ outstdF=$keywordsF.poems.std
 
 # convert the verbose format to human readable format
 java -jar rnn_poem_post_precessor.jar $outputF $outstdF
-
-
