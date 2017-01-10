@@ -59,6 +59,3 @@ BLEU2-final
 
 # MISC
 MISC
-
-# 否定忽略
-!rnnpg-generator/rnn_poem_post_precessor.jar
