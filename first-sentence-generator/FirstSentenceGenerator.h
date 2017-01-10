@@ -238,9 +238,9 @@ private:
 		double cost;
 		neuron *hiddenNeu;
 		int hiddenSize;
-		int posInSent;
+		int posInSent;//在一句诗中的位置
 		string curTrans;
-		string word;
+		string word;//存储对应的词
 		vector<string> words;
 
 		int tonalPattern;
@@ -357,8 +357,8 @@ private:
 			delete []arr;
 		}
 	private:
-		StackItem **arr;
-		int maxSize;
+		StackItem **arr;//pq这个优先队列是和arr一起维护的
+		int maxSize;//StackItem指针的数目，或者说arr这个指针数组里StackItem指针的数目
 		int curSize;
 
 		typedef pair<double,int> P;

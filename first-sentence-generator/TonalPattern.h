@@ -28,6 +28,10 @@ const char * const _STD_7QUATRAIN_TPAT_[] = {
 	"AZAPPZZ\nAAZZZPP\nAPAZPPZ\nAZPPZZP\n"
 };
 
+/**
+ * @brief
+ * 存储一句诗的韵律
+ */
 class SenTP
 {
 public:
@@ -35,6 +39,16 @@ public:
 	int validPos;
 	int senLen;
 
+	/**
+	 * @brief
+	 * 解析整个句子的韵律，转换成二进制的位表示
+	 * 举个例子:
+	 * pat:"APAZZPP"
+	 * 和字符串的顺序反过来的
+	 * 分离P与Z,Z为1,P为0->tonalPattern(bit):0011000
+	 * 分离PZ与A,PZ为1,A为0->validPos(bit):  1111010
+	 * @param pat 存储韵律的字符串
+	 */
 	void parse(const string &pat)
 	{
 		tonalPattern = 0;
@@ -58,11 +72,30 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 只能检测validPos中对应tonalPattern为1的部分是正确的，也就是说，如果根据validPos然后是tonalPattern来生成的话，Z的地方一定是对的，但不能保证P的地方是对的
+	 * @param pat
+	 * @param vPos
+	 * @return bool
+	 */
 	bool isValidPattern(int pat, int vPos)
 	{
 		return (tonalPattern & validPos & vPos) == (pat & validPos & vPos);
 	}
 
+	/**
+	 * @brief
+	 * 将位表示的韵律还原成字符串表示的韵律
+	 * 和字符串的顺序反过来的
+	 * 分离P与Z,Z为1,P为0->tonalPattern(bit):0011000
+	 * 分离PZ与A,PZ为1,A为0->validPos(bit):  1111010
+	 * return:"APAZZPP"
+	 * @param tonalPattern 分离P与Z
+	 * @param validPos 分离PZ与A
+	 * @param senLen 句子的长度
+	 * @return string　返回的字符串表示的韵律
+	 */
 	static string inttp2strtp(int tonalPattern, int validPos, int senLen)
 	{
 		string tonalStr = "";
@@ -83,6 +116,11 @@ public:
 		return tonalStr;
 	}
 
+	/**
+	 * @brief
+	 * 将该对象表示的韵律转换成字符串
+	 * @return string
+	 */
 	string toString()
 	{
 		return inttp2strtp(tonalPattern, validPos, senLen);
@@ -116,30 +154,54 @@ public:
 	}
 };
 
+/**
+ * @brief
+ * 存储一首诗的韵律
+ */
 class PoemTP
 {
 public:
 	vector<SenTP> poemtp;
 
+	/**
+	 * @brief
+	 * 添加每句话的韵律
+	 * @param pat 描述一句诗韵律的对象
+	 */
 	void addPat(string pat)
 	{
 		SenTP sentp;
 		sentp.parse(pat);
 		poemtp.push_back(sentp);
 	}
+	/**
+	 * @brief
+	 * 获得某句诗的韵律
+	 * @param i 编号0-3
+	 * @return SenTP 韵律对象
+	 */
 	SenTP& getSenTP(int i)
 	{
 		return poemtp[i];
 	}
 };
 
+/**
+ * @brief
+ * 保存几种通用的格律
+ */
 class TonalPattern
 {
 public:
 	TonalPattern() {	init();	}
+	/**
+	 * @brief
+	 * 构造对象的时候调用，就是用_STD_5QUATRAIN_TPAT_和_STD_7QUATRAIN_TPAT_构造几种PoemTP
+	 */
 	void init()
 	{
 		int i, j;
+		// 处理五言诗
 		for(i = 0; i < 4; i ++)
 		{
 			string tpat = _STD_5QUATRAIN_TPAT_[i];
@@ -151,6 +213,7 @@ public:
 			for(j = 0; j < (int)fields.size(); j ++)
 				qua5tps[last].addPat(fields[j]);
 		}
+		//　处理七言诗
 		for(i = 0; i < 4; i ++)
 		{
 			string tpat = _STD_7QUATRAIN_TPAT_[i];
@@ -164,6 +227,12 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 获得几种韵律格式下第一句诗的韵律，存储在sentps中
+	 * @param wordsPerSen 一句诗的长度
+	 * @param sentps 存储返回韵律对象的容器
+	 */
 	void getFirstSenTPs(int wordsPerSen, vector<SenTP> &sentps)
 	{
 		int i;
@@ -179,14 +248,22 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 获得第tpIndex韵律格式下第senIndex句诗的韵律
+	 * @param wordsPerSen 一句诗的长度
+	 * @param tpIndex 编号0-3
+	 * @param senIndex 编号0-3
+	 * @return SenTP 存储韵律的对象
+	 */
 	SenTP getSenTP(int wordsPerSen, int tpIndex, int senIndex)
 	{
 		vector<PoemTP> &quatps = wordsPerSen == 5 ? qua5tps : qua7tps;
 		return quatps[tpIndex].getSenTP(senIndex);
 	}
 private:
-	vector<PoemTP> qua5tps;
-	vector<PoemTP> qua7tps;
+	vector<PoemTP> qua5tps;//保存了_STD_5QUATRAIN_TPAT_转换成PoemTP的韵律
+	vector<PoemTP> qua7tps;//保存了_STD_7QUATRAIN_TPAT_转换成PoemTP的韵律
 };
 
 #endif /* TONALPATTERN_H_ */

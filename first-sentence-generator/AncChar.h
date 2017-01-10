@@ -27,10 +27,10 @@ public:
 //		snprintf(buf,sizeof(buf),"%s < -- %s:%s%s", ch, )
 //	}
 
-	string ch;
-	int tone;
-	string numstr;
-	string reprChar;
+	string ch;//送/梦/...
+	int tone;//3
+	string numstr;//一
+	string reprChar;//送
 };
 
 

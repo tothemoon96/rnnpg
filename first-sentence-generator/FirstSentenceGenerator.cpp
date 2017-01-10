@@ -103,6 +103,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	// stacks是一个指向指针数组的指针，这个指针数组的长度为senLen + 1
 	Stack **stacks = new Stack*[senLen + 1];
 	for(i = 0; i < senLen; i ++)
+		// stacks中每个元素的构造
 		stacks[i] = new Stack(stackSize, hiddenSize);
 	//最后一个元素构造的与众不同
 	stacks[senLen] = new Stack(topK > stackSize ? topK : stackSize, hiddenSize);
@@ -113,8 +114,8 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	sitem->curTrans = sitem->word = "</s>";
 	stacks[0]->push(sitem);
 
-	// if you want to use tonal pattern constraints
-	vector<SenTP> firstSenPTs;
+	// 控制韵律,if you want to use tonal pattern constraints
+	vector<SenTP> firstSenPTs;//存储第一句诗要遵守的一些格律要求
 	tp.getFirstSenTPs(senLen, firstSenPTs);
 
 	for(i = 0; i < senLen; i ++)
@@ -128,6 +129,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 				string phrase = candiPhrase[k];
 				vector<string> curWords;
 				split(phrase, " ", curWords);
+				//如果生成的当前位置的下标＋curWords.size()超过了一句话的长度，就选择下一个phrase
 				if(i + (int)curWords.size() > senLen)
 					break;
 
