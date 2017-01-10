@@ -47,7 +47,7 @@ export LD_LIBRARY_PATH="/home/tothemoon/Project/rnnpg/kenlm/lib:$LD_LIBRARY_PATH
 ```
 (2) 在项目根目录下执行make
 
-+ Debug版(Debug版运行时还有一些问题 )：
++ Debug版：
 ```
 make -j4 debug
 ```

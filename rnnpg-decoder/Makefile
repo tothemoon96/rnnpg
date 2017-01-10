@@ -8,7 +8,7 @@ CPPFLAGS := -O3 -funroll-loops -ffast-math -finline-functions -Wall -Winline -pi
 ifdef DEBUGFLAGS
 	ifeq ($(DEBUGFLAGS),1)
 		ifeq "$(origin DEBUGFLAGS)" "command line"
-			CPPFLAGS += -g3 -gdwarf-2 -DDEBUG
+			CPPFLAGS := -Og -g3 -Wall -Winline -pipe -DKENLM_MAX_ORDER=6
 		endif
 	endif
 endif
