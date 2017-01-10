@@ -97,6 +97,13 @@ private:
 		return s1.length() < s2.length();
 	}
 
+	/**
+	 * @brief
+	 * 如果s1的长度小于s2，返回1,反之返回0
+	 * @param s1 字符串
+	 * @param s2 字符串
+	 * @return bool 返回值
+	 */
 	static bool phrlencmp(const string& s1, const string& s2)
 	{
 		return getPhraseLen(s1) < getPhraseLen(s2);

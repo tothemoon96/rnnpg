@@ -1,6 +1,12 @@
 #!/bin/sh
 
 codedir=PoemGeneration_via_SMT_utils
+cd $codedir
+if [ ! -d "./bin" ] ; then
+	mkdir bin
+fi
+cd ..
+
 javac -sourcepath $codedir/src -d $codedir/bin $codedir/src/dio/*.java
 javac -sourcepath $codedir/src -d $codedir/bin $codedir/src/smt_poem_generation/*.java
 
