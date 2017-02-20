@@ -91,6 +91,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	cout << interpolateWeights[0] << " -- " << interpolateWeights[1] << endl;
 //	cout << "get first sentence " << endl;
 	topSents.clear();
+	//candiPhrase中存储的是形如("衾 寒","灯 残",...,"惊 鹊 未 安 枝")这样的短语
 	vector<string> candiPhrase;
 	int i, j, k;
 	getCandidatePhrase(keywords, candiPhrase);
@@ -118,25 +119,34 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	vector<SenTP> firstSenPTs;//存储第一句诗要遵守的一些格律要求
 	tp.getFirstSenTPs(senLen, firstSenPTs);
 
+	//对一首诗里第一句话里的每个字的位置
 	for(i = 0; i < senLen; i ++)
 	{
 		Stack *nxStack = NULL;
+		//对Stack中的每一个StackItem
 		for(j = 0; j < stacks[i]->size(); j ++)
 		{
 			StackItem *curItem = stacks[i]->get(j);
+			//对每一个候选短语
 			for(k = 0; k < (int)candiPhrase.size(); k ++)
 			{
 				string phrase = candiPhrase[k];
 				vector<string> curWords;
-				split(phrase, " ", curWords);
-				//如果生成的当前位置的下标＋curWords.size()超过了一句话的长度，就选择下一个phrase
+				split(phrase, " ", curWords);//把一个短语分割成字符
+				//如果生成的当前位置的下标＋curWords.size()超过了一句话的长度，就选择下一个StackItem
 				if(i + (int)curWords.size() > senLen)
 					break;
 
 				// before doing anything, check the tonal pattern first!
+				//在初始时刻，从</s>开始,tonalPattern,validPos,curTPIdx都是0
 				int tonalPattern = curItem->tonalPattern;
 				int validPos = curItem->validPos;
 				int curTPIdx = curItem->curTPIdx;
+
+				//下面循环的功能的举例说明:若当前正在处理的curWords的平仄为P,Z，已经处理到五言诗的第３个词
+				//validPos    :01100
+				//tonalPattern:01000
+				//对候选短语中的每一个词
 				for(int cIdx = 0; cIdx < (int)curWords.size(); cIdx ++)
 				{
 					string ch = curWords[cIdx];
@@ -152,6 +162,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 					}
 				}
 
+				//为整个第一句诗寻找一个合适的韵律,作为当前的curTPIdx
 				for( ; curTPIdx < (int)firstSenPTs.size(); curTPIdx ++)
 				{
 					SenTP senTP = firstSenPTs[curTPIdx];
@@ -168,11 +179,10 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 				nxItem->validPos = validPos;
 				nxItem->curTPIdx = curTPIdx;
 
-
 				vector<double> rnnprobs, kn3probs;
 				double rnnLogProb = rnnlm->computeNetPhrase(curItem->word.c_str(), curWords,
-						curItem->hiddenNeu, newHiddenNeu, rnnprobs);
-				double kenLogProb = getLMLogProb(curItem->curTrans, curWords, kn3probs);
+						curItem->hiddenNeu, newHiddenNeu, rnnprobs);//计算使用rnnlm时词的生成对数概率
+				double kenLogProb = getLMLogProb(curItem->curTrans, curWords, kn3probs);//计算使用kenlm时词的生成对数概率
 
 
 				nxItem->featVals[0] = curItem->featVals[0] + rnnLogProb;
@@ -182,7 +192,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 
 				nxItem->renewHiddenNeu(newHiddenNeu);
 				nxItem->posInSent = curItem->posInSent + curWords.size();
-				nxItem->word = curWords[curWords.size() - 1];
+				nxItem->word = curWords[curWords.size() - 1];//取curWords的最后一个字作为新状态的word
 
 				// .. record used phrase ..
 				nxItem->words = curItem->words;

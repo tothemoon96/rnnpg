@@ -74,7 +74,7 @@ public:
 
 	/**
 	 * @brief
-	 * 只能检测validPos中对应tonalPattern为1的部分是正确的，也就是说，如果根据validPos然后是tonalPattern来生成的话，Z的地方一定是对的，但不能保证P的地方是对的
+	 * 检测pat代表的二进制韵律是否是有效的韵律
 	 * @param pat
 	 * @param vPos
 	 * @return bool
@@ -262,6 +262,8 @@ public:
 		return quatps[tpIndex].getSenTP(senIndex);
 	}
 private:
+	//这两个向量的数据结构
+	//TonalPattern(vector<PoemTP>*2)->vector<PoemTP>(PoemTP*4)->PoemTP(SenTP*4)
 	vector<PoemTP> qua5tps;//保存了_STD_5QUATRAIN_TPAT_转换成PoemTP的韵律
 	vector<PoemTP> qua7tps;//保存了_STD_7QUATRAIN_TPAT_转换成PoemTP的韵律
 };
