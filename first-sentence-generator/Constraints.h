@@ -130,6 +130,7 @@ static const int DISC_REP = 2;
 static const int FREQ_GT2_REP = 4;
 static const int REP_GE2_REP = 8;
 
+//以下的几个数据结构存储的是词语切分的可能情况，下标从０开始编号
 static int seg5_1[3][2] = {
 		{0, 1},
 		{2, 3},
@@ -246,6 +247,15 @@ public:
 		return -1;
 	}
 
+	/**
+	 * @brief
+	 * 检查某个词语是否能以一个模式进行切分
+	 * @param segPos[][]
+	 * @param M
+	 * @param start
+	 * @param end
+	 * @return bool
+	 */
 	bool isSegOK(int segPos[][2], int M, int start, int end)
 	{
 		int si = find(segPos, M, start);
@@ -255,13 +265,20 @@ public:
 		return true;
 	}
 
+	/**
+	 * @brief
+	 * 检查一句诗中各个词语的切分是否合理，切分成功返回True，否则为False
+	 * @param words 如("空　山","新　雨","后")
+	 * @param senLen
+	 * @return bool
+	 */
 	bool isSegmentOK(vector<string> &words, int senLen)
 	{
 		int start = 0, end = -1;
 		size_t i;
 		for(i = 0; i < words.size(); i ++)
 		{
-			vector<string> vword;
+			vector<string> vword;//"空 山"->（"空"，＂山＂）
 			split(words[i], " ", vword);
 			end = start + vword.size() - 1;
 			if(senLen == 5)
@@ -274,7 +291,7 @@ public:
 				if(!isSegOK(seg7_1, 4, start, end) && !isSegOK(seg7_2, 4, start, end))
 					return false;
 			}
-			start = end + 1;
+			start = end + 1;//切换到下一个词
 		}
 		return true;
 	}

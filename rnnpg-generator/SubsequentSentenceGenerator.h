@@ -186,6 +186,7 @@ public:
 		{
 			string line = buf;
 			trim(line);
+			//如果读取到了诗的一组关键词
 			if(buf[0] == '<')
 			{
 				cnt = 0;
@@ -194,7 +195,7 @@ public:
 				trim(keywords);
 				isEnd = false;
 				firstSentLines.clear();
-			}
+			}//如果读到了５言诗或者７言诗的一组关键词结束了
 			else if(buf[0] == '\n')
 			{
 				if(!isEnd)
@@ -207,8 +208,8 @@ public:
 						vector<string> fields;
 						split(firstSentLines[i], "|||", fields);
 						trim(fields[0]);
-						string firstSent = fields[0];
-						int tpIndex = atoi(fields[5].c_str());
+						string firstSent = fields[0];//如＂游 春 车 马 客＂
+						int tpIndex = atoi(fields[5].c_str());//使用的韵律格式的索引下标
 						if(generatePoem(firstSent, tpIndex, allTopSents, poem))
 							break;
 						else
@@ -496,6 +497,15 @@ private:
 //		return true;
 //	}
 
+	/**
+	 * @brief
+	 *
+	 * @param firstSent 如＂游 春 车 马 客＂
+	 * @param tpIndex
+	 * @param allTopSents
+	 * @param poem
+	 * @return bool
+	 */
 	bool generatePoem(string firstSent, int tpIndex, vector<vector<string> > &allTopSents, vector<string> &poem)
 	{
 		int i, j;
@@ -504,9 +514,9 @@ private:
 		vector<string> prevSents, topSents;
 		prevSents.push_back(firstSent);
 		vector<string> words;
-		split(firstSent, " ", words);
+		split(firstSent, " ", words);//如(＂游＂，＂春＂，＂车＂，＂马＂，＂客＂)
 		assert(words.size() == 5 || words.size() == 7);
-		int pathIndex = words.size() == 5 ? 0 : 1;
+		int pathIndex = words.size() == 5 ? 0 : 1;//决定是５言诗还是7言诗
 		for(i = 0; i < DECODER_NUMBER; i ++)
 		{
 			// load weight first ...

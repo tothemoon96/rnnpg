@@ -78,7 +78,7 @@ void FirstSentenceGenerator::getCandidatePhrase(const vector<string> &keywords, 
 
 /**
  * @brief
- * 根据关键词生成第一句诗
+ * 根据关键词生成第一句诗，生成topK句存放在topSents中
  * @param keywords　存储关键词的向量，如（＂空　山＂，＂新　雨＂，＂后＂）
  * @param topK 生成生成概率最大的前topK个句子
  * @param senLen 生成的句子的长度
@@ -102,7 +102,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 //		cout << candiPhrase[i] << endl;
 	neuron *newHiddenNeu = new neuron[hiddenSize];
 	// stacks是一个指向指针数组的指针，这个指针数组的长度为senLen + 1
-	Stack **stacks = new Stack*[senLen + 1];
+	Stack **stacks = new Stack*[senLen + 1];//stacks[i],i指示的是已经生成了i个字
 	for(i = 0; i < senLen; i ++)
 		// stacks中每个元素的构造
 		stacks[i] = new Stack(stackSize, hiddenSize);
@@ -113,6 +113,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	sitem = new StackItem(hiddenSize);
 	sitem->posInSent = 0;
 	sitem->curTrans = sitem->word = "</s>";
+	//其实第stacks[0]里就存了一个Stack，没有存其他的东西
 	stacks[0]->push(sitem);
 
 	// 控制韵律,if you want to use tonal pattern constraints
@@ -131,7 +132,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 			for(k = 0; k < (int)candiPhrase.size(); k ++)
 			{
 				string phrase = candiPhrase[k];
-				vector<string> curWords;
+				vector<string> curWords;//存储candiPhrase的每一个字的vector
 				split(phrase, " ", curWords);//把一个短语分割成字符
 				//如果生成的当前位置的下标＋curWords.size()超过了一句话的长度，就选择下一个StackItem
 				if(i + (int)curWords.size() > senLen)
@@ -144,6 +145,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 				int curTPIdx = curItem->curTPIdx;
 
 				//下面循环的功能的举例说明:若当前正在处理的curWords的平仄为P,Z，已经处理到五言诗的第３个词
+				//如--PZ?，则
 				//validPos    :01100
 				//tonalPattern:01000
 				//对候选短语中的每一个词
@@ -208,7 +210,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 				if(nxStack->recombine(nxItem))
 					continue;
 
-				// when the stack is full, we need to prune the items
+				// when the stack is full, we need to prune the items，Stack满和不满有不同的处理逻辑
 				if(nxStack->isFull())
 				{
 					if(!nxStack->prune(nxItem))
@@ -230,10 +232,13 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 		StackItem *curItem = stacks[senLen]->get(i);
 		vector<string> curWords;
 		curWords.push_back("</s>");
-		vector<double> rnnprobs;
+		//RNNLM检查这一行诗完结的概率
+		vector<double> rnnprobs;		
 		double rnnLogProb = rnnlm->computeNetPhrase(curItem->word.c_str(), curWords, curItem->hiddenNeu, newHiddenNeu, rnnprobs);
+		//KENLM检查这一行诗完结的概率
 		vector<double> kn3probs;
 		double kenLogProb = getLMLogProb(curItem->curTrans, curWords, kn3probs);
+
 		curItem->featVals[0] = curItem->featVals[0] + rnnLogProb;
 		curItem->featVals[1] = curItem->featVals[1] + kenLogProb;
 		curItem->interpolate(rnnprobs, kn3probs, interpolateWeights, curItem->cost);
@@ -244,7 +249,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 
 	topSents.clear();
 	char strBuf[1024];
-	int cnt = 0;
+	int cnt = 0;//当前处理的备选句子的个数
 	for(i = 0; i < stacks[senLen]->size(); i ++)
 	{
 		StackItem *sitem = stacks[senLen]->get(i);
@@ -256,7 +261,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 //			cout << "after ";
 //			printsvec(sitem->words);
 
-			string pureSent = removeS(sitem->curTrans);
+			string pureSent = removeS(sitem->curTrans);//去除首尾的</s>
 			string featValStr;
 			// sitem->getFeatValString(featValStr);
 			snprintf(strBuf, sizeof(strBuf), " ||| %s |||%s", pureSent.c_str(), sitem->toFirstSentString(senLen, firstSenPTs).c_str());

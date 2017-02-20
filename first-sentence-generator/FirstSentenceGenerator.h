@@ -156,6 +156,13 @@ private:
 			for(int i = 0; i < hiddenSize; i ++)
 				hiddenNeu[i].ac = newHiddenNeu[i].ac;
 		}
+		/**
+		 * @brief
+		 * 将StackItem的各个属性分别输出
+		 * @param senLen
+		 * @param firstSenPTs
+		 * @return string
+		 */
 		string toFirstSentString(int senLen, vector<SenTP> &firstSenPTs)
 		{
 			string str;
@@ -244,13 +251,13 @@ private:
 			return firstItem->featVals[0] > secondItem->featVals[0];
 		}
 	// private:
-		double cost;
+		double cost;//当前sitem的生成概率
 		neuron *hiddenNeu;
 		int hiddenSize;
 		int posInSent;//在一句诗中的位置
-		string curTrans;//保存当前状态下目前生成的内容的字符串形式
+		string curTrans;//保存当前状态下目前生成的内容的字符串形式,包含</s>，如＂</s> 空 上 新 雨 后 </s>＂
 		string word;//存储目前生成内容的最后一个字
-		vector<string> words;//保存当前状态下目前生成的内容
+		vector<string> words;//保存当前状态下目前生成的内容,如（＂空　山＂，＂新　雨＂，＂后＂）不包含首尾的</s>
 
 		int tonalPattern;
 		int validPos;
@@ -314,8 +321,8 @@ private:
 		/**
 		 * @brief
 		 * 对Stack中的项目进行裁剪,删除掉pq中和arr中不一致的项目
-		 * 若存在满足条件的项目，则删除一项Stack生成概率小于sitem的项目，返回True
-		 * 若不存在满足条件的项目或者pq为空，返回False
+		 * 若Stack中存在生成概率小于sitem的项目，则删除一项Stack生成概率小于sitem的项目，用Sitem将其替换，返回True
+		 * 若不存在上述条件的项目或者pq为空，返回False
 		 * @param sitem
 		 * @return bool
 		 */
@@ -373,6 +380,10 @@ private:
 		{
 			return curSize;
 		}
+		/**
+		 * @brief
+		 * 按照cost由大到小排序
+		 */
 		void sortByCost()
 		{
 			if(curSize > 1)

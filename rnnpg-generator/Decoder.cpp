@@ -550,6 +550,7 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 	split(prevSents[0], " ", words);
 	int senLen = words.size();
 
+	//得到当前要生成的这句诗的韵律
 	SenTP sentp = tp.getSenTP(senLen, tonalPatternIndex, prevSents.size());
 
 	int maxNGram = transTable->getMaxNGram();
