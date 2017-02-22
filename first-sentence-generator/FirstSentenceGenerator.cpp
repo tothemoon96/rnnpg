@@ -95,7 +95,7 @@ void FirstSentenceGenerator::getFirstSentence(const vector<string> &keywords, in
 	vector<string> candiPhrase;
 	int i, j, k;
 	getCandidatePhrase(keywords, candiPhrase);
-	// 按照字符串的长度有小到大进行排序
+	// 按照字符串的长度由小到大进行排序
 	sort(candiPhrase.begin(), candiPhrase.end(), phrlencmp);
 //	cout << "candi phrase size " << candiPhrase.size() << endl;
 //	for(i = 0; i < candiPhrase.size(); i ++)

@@ -306,6 +306,14 @@ private:
 	int disableRNN;
 
 	enum SLEN{MAX_SEN_LEN = 8};
+	//contextHiddenNeu的数据结构
+	//|--------H*u_i^j(hiddenSize)--------|
+	//|0								  |
+	//|1								  |
+	//|2								  |
+	//|...								  |
+	//|6								  |
+	//|7								  |
 	neuron *contextHiddenNeu[MAX_SEN_LEN];
 
 	enum FSIZE{FEATURE_SIZE = 7};
@@ -342,11 +350,19 @@ private:
 	double getLMLogProb(string curTrans, vector<string> &curWords);
 	double getLMLogProb(string curTrans, vector<string> &curWords, vector<double> &probs);
 
+	/**
+	 * @brief
+	 * 检查把word拼接到trans的时候是否会出现N个或者N个以上重复的字,若存在，则返回true，不存在，则返回false
+	 * @param trans 已经生成的序列
+	 * @param word 备选短语
+	 * @param N
+	 * @return bool
+	 */
 	bool repeatGT(const string &trans, const string &word, int N)
 	{
 		vector<string> twords, words;
-		split(trans, " ", twords);
-		split(word, " ", words);
+		split(trans, " ", twords);//trans
+		split(word, " ", words);//word
 		int begin = twords.size();
 		twords.reserve(twords.size() + words.size());
 		twords.insert(twords.end(), words.begin(), words.end());
@@ -400,6 +416,12 @@ private:
 		return false;
 	}
 
+	/**
+	 * @brief
+	 * 将prevSents中的每句话切分成每个字存储在prevWords之中，每个字不重复
+	 * @param prevSents
+	 * @param prevWords
+	 */
 	void loadPreviousWords(vector<string> &prevSents, set<string> &prevWords)
 	{
 		prevWords.clear();
@@ -413,6 +435,12 @@ private:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 计算一个phr里有多少个词
+	 * @param phr
+	 * @return int
+	 */
 	int getPhraseLen(const char*phr)
 	{
 		int cnt = 0;

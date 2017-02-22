@@ -2955,7 +2955,7 @@ void RNNPG::matrixXvector(struct neuron *dest, struct neuron *srcvec, struct syn
 
 /**
  * Since given all the previous sentences, the resulting activation caused by these sentences in hiddenNeu is constant,
- * we pre-compute all the activations here
+ * we pre-compute all the activations here，所有的计算都对应的是prevSents的最后一句
  * 如果flushOption = EVERY_POEM，则计算RGM的隐含层，否则只计算RCM的隐含层
  * contextHiddenNeu对应于H*u_i^j
  */
@@ -3149,6 +3149,17 @@ void RNNPG::computeNetContext(const char *lword, const char *cword, neuron *curH
 	}
 }
 
+/**
+ * @brief
+ * 给定想要生成的words，计算生成它的对谁概率，并保存RGM的状态r_j到newHiddenNeu之中
+ * @param lword 之前生成内容的最后一个字
+ * @param startPos lword在一句诗中属于第几个字，从1开始编号
+ * @param words 存储用于计算网络的备选词的vector
+ * @param curHiddenNeu RGM运行到lword时候的r_j
+ * @param contextHiddenNeus 保存H*u_i^j的一个数组，下标从0到7
+ * @param newHiddenNeu RGM运行到words.size()-1之后的r_j
+ * @return double 生成候选词的对数概率
+ */
 double RNNPG::computeNetContext(const char *lword, int startPos, const vector<string> &words, neuron *curHiddenNeu, neuron **contextHiddenNeus,
 			neuron *newHiddenNeu)
 {
@@ -3157,7 +3168,7 @@ double RNNPG::computeNetContext(const char *lword, int startPos, const vector<st
 	if(lastWord == -1) lastWord = vocab.getVocabID("<R>");
 	int i, j, V = vocab.getVocabSize();
 
-	// recurrent from last time hidden layer: put last time hidden layer in the input layer
+	// recurrent from last time hidden layer: put last time hidden layer in the input layer，如果到了一句话的结尾，选择刷新策略对网络进行处理
 	if(lastWord == 0)	// if lword == "</s>"
 	{
 		if(flushOption == EVERY_SENTENCE)
@@ -3176,19 +3187,20 @@ double RNNPG::computeNetContext(const char *lword, int startPos, const vector<st
 	// cout << "copy activation done!" << endl;
 
 	int curPos = startPos, N = V + hiddenSize + hiddenSize;
+	//对于候选词的每个字
 	for(size_t idx = 0; idx < words.size(); idx ++)
 	{
 		// cout << "word = " << words[idx] << endl;
 
 		copyNeurons(hiddenNeu, contextHiddenNeus[curPos], hiddenSize, 1);
-		matrixXvector(hiddenNeu, inNeu, hiddenInSyn, N, 0, hiddenSize, V + hiddenSize, V + hiddenSize + hiddenSize, 0);
+		matrixXvector(hiddenNeu, inNeu, hiddenInSyn, N, 0, hiddenSize, V + hiddenSize, V + hiddenSize + hiddenSize, 0);//计算R*r_{j-1}
 		for(i = 0; i < hiddenSize; i ++)
-			hiddenNeu[i].ac += hiddenInSyn[i*N + lastWord].weight;
+			hiddenNeu[i].ac += hiddenInSyn[i*N + lastWord].weight;//计算X*e(w_j)
 		funACNeurons(hiddenNeu, hiddenSize);
 
 		// cout << "compute activation done" << endl;
 
-		// compute probs on classes
+		// compute probs on classes，计算对词类的概率
 		clearNeurons(outNeu + V, classSize, 1);
 		matrixXvector(outNeu, hiddenNeu, outHiddenSyn, hiddenSize, V, V + classSize, 0, hiddenSize, 0);
 		double sum = 0;
@@ -3213,6 +3225,7 @@ double RNNPG::computeNetContext(const char *lword, int startPos, const vector<st
 		if(curWord == -1)
 			curWord = vocab.getVocabID("<R>");
 
+		//计算词类对词的概率
 		int classIndex = voc_arr[curWord].classIndex;
 		matrixXvector(outNeu, hiddenNeu, outHiddenSyn, hiddenSize, classStart[classIndex], classEnd[classIndex], 0, hiddenSize, 0);
 		sum = 0;
@@ -3230,6 +3243,7 @@ double RNNPG::computeNetContext(const char *lword, int startPos, const vector<st
 		lastWord = curWord;
 
 		curPos ++;
+		//如果还没到候选词的最后一个字
 		if(idx != words.size() - 1)
 			copyHiddenLayerToInput();
 		else

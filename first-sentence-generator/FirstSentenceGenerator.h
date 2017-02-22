@@ -254,7 +254,7 @@ private:
 		double cost;//当前sitem的生成概率
 		neuron *hiddenNeu;
 		int hiddenSize;
-		int posInSent;//在一句诗中的位置
+		int posInSent;//在一句诗中的位置，从１开始编号
 		string curTrans;//保存当前状态下目前生成的内容的字符串形式,包含</s>，如＂</s> 空 上 新 雨 后 </s>＂
 		string word;//存储目前生成内容的最后一个字
 		vector<string> words;//保存当前状态下目前生成的内容,如（＂空　山＂，＂新　雨＂，＂后＂）不包含首尾的</s>
