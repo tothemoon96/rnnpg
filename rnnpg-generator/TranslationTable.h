@@ -207,6 +207,13 @@ public:
 		cout << "loading done!" << endl;
 	}
 
+	/**
+	 * @brief
+	 * 在transTbls中搜寻log(P(second|first))
+	 * @param first
+	 * @param second
+	 * @return double
+	 */
 	double getProb(const char* first, const char* second)
 	{
 		int len = getPhraseLen(first);
@@ -218,6 +225,13 @@ public:
 		return transTbls[len-1][pos]->getProb(second);
 	}
 
+	/**
+	 * @brief
+	 * 在invertedTransTbls中搜寻log(P(second|first))
+	 * @param first
+	 * @param second
+	 * @return double
+	 */
 	double getProbInverted(const char* first, const char* second)
 	{
 		int len = getPhraseLen(first);
@@ -233,7 +247,6 @@ public:
 	 * @brief
 	 * 计算给定first这个短语，first能够生成的所有词的条件概率，P(phrase|first)，将结果存放在vector<pair<char*,double>>中，pair的第一栏是生成的词，第二栏是概率
 	 * @param first
-	 * @param
 	 * @param trans
 	 */
 	void getAllTrans(const char *first, vector<pair<char*,double> > &trans)
@@ -286,7 +299,7 @@ private:
 	//vector[0-2]代表着trans_table中每种类型的第一栏有多少个字，trans_table文件中不同的字数之间有@@@@@@@@分隔
 	//|->vector它的size()是不同类型的第一栏各自的元素数目
 	//|	   |->TransList
-	//|	   |      |->int word 表示在StringBuffer中字符串的小标
+	//|	   |      |->int word 表示在StringBuffer中字符串的索引
 	//|    |      |->int total 某个字符串出现的频率
 	//|	   |	  |->pair<int,int> tlist存储trans_table文件中第三栏的内容，pair第一栏存StringBuffer中的索引，第二栏存出现的次数
 	vector<vector<TransList*> > transTbls;

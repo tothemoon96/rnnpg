@@ -91,6 +91,11 @@ public:
 		for(int i = 0; i < FEATURE_SIZE; i ++)
 			cost += featVals[i];
 	}
+	/**
+	 * @brief
+	 * 将每种模型生成的对数概率加权平均，得出cost
+	 * @param featWeights
+	 */
 	void updateCost(double *featWeights)
 	{
 		cost = 0;
@@ -132,6 +137,7 @@ public:
 	// 3. P(Fi|Si) phrase prob; 4. P(Fi|Si) lexical prob;
 	// 5. P(pos|ch) : the probability of a char 'ch' appearing at the position 'pos'
 	// 6. KN3 Language Model feature
+	// 这里的inverted和我注释里的反向有一些不同
 	enum FSIZE{FEATURE_SIZE = 7};
 	double featVals[FEATURE_SIZE];
 };
@@ -219,11 +225,19 @@ public:
 	{
 		return curSize;
 	}
+	/**
+	 * @brief
+	 * 将StackItem按照加权平均的cost由大到小进行排序
+	 */
 	void sortByCost()
 	{
 		if(curSize > 1)
 			sort(arr, arr + curSize, StackItem::stack_item_cmp);
 	}
+	/**
+	 * @brief
+	 * 将StackItem按照RNNPG的生成概率由大到小进行排序
+	 */
 	void rerankByRNNPG()
 	{
 		if(curSize > 1)

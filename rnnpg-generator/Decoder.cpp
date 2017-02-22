@@ -187,7 +187,7 @@ int Decoder::decode(const char* infile, const char* outfile, int stackSize, int 
 
 /**
  * @brief
- *
+ * 把first和second对应的每个词拆开成对应的字，在正向查询表中,计算\sum_i log(P(second_i|first_i))
  * @param first
  * @param second
  * @return double
@@ -209,6 +209,13 @@ double Decoder::getInvertedLexLogProb(const char *first, const char *second)
 	return logProb;
 }
 
+/**
+ * @brief
+ * 把first和second对应的每个词拆开成对应的字，在反向查询表中，计算\sum_i log(P(first_i|second_i))
+ * @param first
+ * @param second
+ * @return double
+ */
 double Decoder::getLexLogProb(const char *first, const char *second)
 {
 	vector<string> fwords, swords;
@@ -545,6 +552,16 @@ int Decoder::decodeTransTable(vector<string> &prevSents, int stackSize, int K, v
 	return 0;
 }
 
+/**
+ * @brief
+ * 使用prevSents来生成下一句诗，施加了一些韵律的约束
+ * @param prevSents 存放之前生成出的诗句
+ * @param stackSize 临时存放栈的大小
+ * @param K 选择生成概率最大的K个句子
+ * @param tonalPatternIndex 整首诗服从的韵律，在TonalPattern.h文件中取值
+ * @param topSents 存放生成概率最大的K个句子的相关信息
+ * @return int
+ */
 int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int K, int tonalPatternIndex, vector<string> &topSents)
 {
 	if(!useToneRhythm)
@@ -726,15 +743,18 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 					if(channelOption & 1)//0b01
 					{
 						double invertedPhraseProb = trans[t].second;
-						double invertedPhraseLogProb = log(invertedPhraseProb);
+						double invertedPhraseLogProb = log(invertedPhraseProb);//使用正向查询表，将trans[t].first作为一个整体，计算 log(P(second|first))
+						//使用正向查询表，将trans[t].first拆分成一个个字，计算\sum_i log(P(second_i|first_i))
 						double invertedLexLogProb = getInvertedLexLogProb(first.c_str(), trans[t].first);
 						nxItem->featVals[1] = curItem->featVals[1] + invertedPhraseLogProb;
 						nxItem->featVals[2] = curItem->featVals[2] + invertedLexLogProb;
 					}
 					if(channelOption & 2)//0b10
 					{
+						//在反向查询表中计算log(P(first|second))
 						double phraseProb = transTable->getProbInverted(trans[t].first, first.c_str());
 						double phraseLogProb = log(phraseProb);
+						//使用反向查询表，将trans[t].first拆分成一个个字，计算\sum_i log(P(first_i|second_i))
 						double lexLogProb = getLexLogProb(first.c_str(), trans[t].first);
 						nxItem->featVals[3] = curItem->featVals[3] + phraseLogProb;
 						nxItem->featVals[4] = curItem->featVals[4] + lexLogProb;

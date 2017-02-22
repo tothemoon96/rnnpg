@@ -548,7 +548,7 @@ private:
 					goodSents.clear();
 					goodSents.push_back(fields[0]);
 				}
-				else if(cost == minCost)
+				else if(cost == minCost)//0b1000
 					goodSents.push_back(fields[0]);
 
 				// try
