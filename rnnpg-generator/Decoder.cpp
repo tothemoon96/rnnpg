@@ -646,7 +646,7 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 //					if(containUsedWords(prevWords, second))
 //						continue;
 
-					//如果生成的一个短语存在重复的两个字，那个这个生成结果是不可取的，检查下一个备选短语
+					//结合上面的循环，在这里的意思是，如果生成的一个存在重复的三个字，那个这个生成结果是不可取的，检查下一个备选短语
 					if(repeatGT(curItem->curTrans, second, 2))
 						continue;
 

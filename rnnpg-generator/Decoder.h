@@ -366,7 +366,12 @@ private:
 
 	/**
 	 * @brief
-	 * 检查把word拼接到trans的时候是否会出现N个或者N个以上重复的字,若存在，则返回true，不存在，则返回false
+	 * 检查把word拼接到trans的时候时，trans里和word里或者word内部是否会出现N+1个或者N+1个以上重复的字,若存在，则返回true，不存在，则返回false
+	 * 举例如下:
+	 * trans:＂芳　草＂　word:＂凄 凄＂ N:2 return:false
+	 * trans:＂天　若　有　情＂ word:＂天 亦 老＂ N:2 return:false
+	 * trans:＂凄 凄＂ word:"园 中 草" N:1 return:false
+	 * 换而言之，不会检查trans内部的重复
 	 * @param trans 已经生成的序列
 	 * @param word 备选短语
 	 * @param N
