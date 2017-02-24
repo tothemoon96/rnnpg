@@ -1,3 +1,6 @@
+.gitignore
+experiments/specified_keywords.sh
+first-sentence-generator/specified_keywords.sh
 rnnpg-decoder/Decoder.cpp
 rnnpg-decoder/Decoder.h
 rnnpg-decoder/KenLMM.h
@@ -38,6 +41,7 @@ rnnpg-generator/WordEmbedding.h
 rnnpg-generator/XConfig.cpp
 rnnpg-generator/XConfig.h
 rnnpg-generator/main.cpp
+rnnpg-generator/specified_keywords.sh
 rnnpg-generator/xutil.cpp
 rnnpg-generator/xutil.h
 rnnpg/xutil.h
