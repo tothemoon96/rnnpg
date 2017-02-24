@@ -171,6 +171,12 @@ void rtrim(string &str, const string &sep)
 	str.erase(str.find_last_not_of(sep) + 1);
 }
 
+/**
+ * @brief
+ * 删除一个字符串1.从开始到第一个非分隔符之间的字符2.字符春末尾的所有分隔符，分隔符包括" \t\r\n"
+ * @param str
+ * @param sep
+ */
 void trim(string &str, const string &sep)
 {
 	str.erase(0, str.find_first_not_of(sep));

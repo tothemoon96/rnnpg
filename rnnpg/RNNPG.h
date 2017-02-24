@@ -125,6 +125,11 @@ public:
 
 	// get parameters
 	int getHiddenSize()	{	return hiddenSize;	}
+	/**
+	 * @brief
+	 * 将隐含层r_j的数据复制到hiddenNeuron当中
+	 * @param hiddenNeurons
+	 */
 	void getHiddenNeuron(neuron * hiddenNeurons)
 	{
 		for(int i = 0; i < hiddenSize; i ++)

@@ -177,7 +177,7 @@ public:
 		FILE *fin = xfopen(firstSentFile, "r", "open file first sentence file %s failed!");
 		FILE *fout = xfopen(outFile, "w");
 		char buf[1024];
-		int cnt = 0;
+		int cnt = 0;//一组关键词对应的第一句中的第几项
 		bool isEnd = false;
 		string keywords;
 		vector<string> firstSentLines;
@@ -186,6 +186,7 @@ public:
 		{
 			string line = buf;
 			trim(line);
+			//如果读取到了诗的一组关键词
 			if(buf[0] == '<')
 			{
 				cnt = 0;
@@ -194,7 +195,7 @@ public:
 				trim(keywords);
 				isEnd = false;
 				firstSentLines.clear();
-			}
+			}//如果读到了５言诗或者７言诗的一组关键词结束了
 			else if(buf[0] == '\n')
 			{
 				if(!isEnd)
@@ -207,9 +208,10 @@ public:
 						vector<string> fields;
 						split(firstSentLines[i], "|||", fields);
 						trim(fields[0]);
-						string firstSent = fields[0];
-						int tpIndex = atoi(fields[5].c_str());
+						string firstSent = fields[0];//如＂游 春 车 马 客＂
+						int tpIndex = atoi(fields[5].c_str());//使用的韵律格式的索引下标
 						if(generatePoem(firstSent, tpIndex, allTopSents, poem))
+							//一首诗生成完毕，就break
 							break;
 						else
 							cout << firstSent << ", failed to generate a poem" << endl;
@@ -496,6 +498,15 @@ private:
 //		return true;
 //	}
 
+	/**
+	 * @brief
+	 * 使用firstSent生成一首诗，生成的结果存放在poem里，allTopSents存放生成每一句里概率最大的几个句子
+	 * @param firstSent 如＂游 春 车 马 客＂
+	 * @param tpIndex
+	 * @param allTopSents
+	 * @param poem
+	 * @return bool
+	 */
 	bool generatePoem(string firstSent, int tpIndex, vector<vector<string> > &allTopSents, vector<string> &poem)
 	{
 		int i, j;
@@ -504,9 +515,10 @@ private:
 		vector<string> prevSents, topSents;
 		prevSents.push_back(firstSent);
 		vector<string> words;
-		split(firstSent, " ", words);
+		split(firstSent, " ", words);//如(＂游＂，＂春＂，＂车＂，＂马＂，＂客＂)
 		assert(words.size() == 5 || words.size() == 7);
-		int pathIndex = words.size() == 5 ? 0 : 1;
+		int pathIndex = words.size() == 5 ? 0 : 1;//决定是５言诗还是7言诗
+		//这个循环会去生成一首诗的后3句诗
 		for(i = 0; i < DECODER_NUMBER; i ++)
 		{
 			// load weight first ...
@@ -524,6 +536,7 @@ private:
 			int minCost = 1000;
 			vector<string> goodSents;
 
+			//在这个循环中prevSents只会向其中添加一项或者一项都不添加
 			for(j = 0; j < (int)topSents.size(); j ++)
 			{
 				vector<string> fields;
@@ -531,6 +544,7 @@ private:
 				trim(fields[0]);
 
 				// estimate cost, if there is no good sentence
+				//cost越小，一行中字重复的程度越低，诗句越好，下面这一段是要寻找cost最小的诗句
 				int cost = this->constraints.containsRep(fields[0]);
 				if(cost < minCost)
 				{
@@ -538,7 +552,7 @@ private:
 					goodSents.clear();
 					goodSents.push_back(fields[0]);
 				}
-				else if(cost == minCost)
+				else if(cost == minCost)//0b1000
 					goodSents.push_back(fields[0]);
 
 				// try
@@ -552,6 +566,7 @@ private:
 					prevSents.pop_back();
 			}
 
+			//如果在之前的循环里一项都没有添加，那么在这里添加一项
 			if(!push)
 			{
 				// int index = rand() % goodSents.size();

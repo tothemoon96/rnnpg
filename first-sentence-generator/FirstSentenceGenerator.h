@@ -54,6 +54,7 @@ private:
 	KenLMM *kenlm;
 	int hiddenSize;
 
+	//这个map的数据结构：{"不 寝":("衾 寒","灯 残",...,"惊 鹊 未 安 枝"),...}
 	map<string,set<string> > shixuehanyingDict;
 
 	enum FSIZE{FEATURE_SIZE = 2};
@@ -155,6 +156,13 @@ private:
 			for(int i = 0; i < hiddenSize; i ++)
 				hiddenNeu[i].ac = newHiddenNeu[i].ac;
 		}
+		/**
+		 * @brief
+		 * 将StackItem的各个属性分别输出
+		 * @param senLen
+		 * @param firstSenPTs
+		 * @return string
+		 */
 		string toFirstSentString(int senLen, vector<SenTP> &firstSenPTs)
 		{
 			string str;
@@ -194,6 +202,14 @@ private:
 		{
 			return a > b ? a : b;
 		}
+		/**
+		 * @brief
+		 * 使用rnnlm和kenlm对词的生成概率进行综合性的评价，修改cost变量
+		 * @param rnnprobs
+		 * @param kn3probs
+		 * @param interpolateWeights
+		 * @param oldCost
+		 */
 		void interpolate(vector<double> rnnprobs, vector<double> kn3probs, double *interpolateWeights, double oldCost)
 		{
 			double logProb = 0;
@@ -235,13 +251,13 @@ private:
 			return firstItem->featVals[0] > secondItem->featVals[0];
 		}
 	// private:
-		double cost;
+		double cost;//当前sitem的生成概率
 		neuron *hiddenNeu;
 		int hiddenSize;
-		int posInSent;
-		string curTrans;
-		string word;
-		vector<string> words;
+		int posInSent;//在一句诗中的位置，从１开始编号
+		string curTrans;//保存当前状态下目前生成的内容的字符串形式,包含</s>，如＂</s> 空 上 新 雨 后 </s>＂
+		string word;//存储目前生成内容的最后一个字
+		vector<string> words;//保存当前状态下目前生成的内容,如（＂空　山＂，＂新　雨＂，＂后＂）不包含首尾的</s>
 
 		int tonalPattern;
 		int validPos;
@@ -275,6 +291,14 @@ private:
 			transIndex[sitem->curTrans] = curSize;
 			arr[curSize++] = sitem;
 		}
+		/**
+		 * @brief
+		 * 检查当前生成的一个片段在这个Stack中是否存在相同的
+		 * 如果之前已经存在了相同的片段，则保留概率较大的那一个，返回true
+		 * 如果之前不存在相同的片段，则返回false
+		 * @param sitem
+		 * @return bool
+		 */
 		bool recombine(StackItem *sitem)
 		{
 			map<string,int>::iterator iter = transIndex.find(sitem->curTrans);
@@ -294,18 +318,29 @@ private:
 			}
 			return false;
 		}
+		/**
+		 * @brief
+		 * 对Stack中的项目进行裁剪,删除掉pq中和arr中不一致的项目
+		 * 若Stack中存在生成概率小于sitem的项目，则删除一项Stack生成概率小于sitem的项目，用Sitem将其替换，返回True
+		 * 若不存在上述条件的项目或者pq为空，返回False
+		 * @param sitem
+		 * @return bool
+		 */
 		bool prune(StackItem *sitem)
 		{
 			while(!pq.empty())
 			{
-				P top = pq.top();
+				P top = pq.top();//从小到大出队
 				double cost = top.first;
 				int index = top.second;
+				//去除实际的cost和pq中cost的不一致性
 				if(cost != arr[index]->cost)
 				{
 					pq.pop();
 					continue;
 				}
+				//如果从pq优先队列里出队的片段生成的概率要小于sitem
+				//那么将该项目其替换成sitem
 				if(sitem->cost > cost)
 				{
 					map<string,int>::iterator iter = transIndex.find(arr[index]->curTrans);
@@ -327,6 +362,11 @@ private:
 
 			return false;
 		}
+		/**
+		 * @brief
+		 * 检查Stack的容量是否已满
+		 * @return bool
+		 */
 		bool isFull() { return curSize >= maxSize; }
 		StackItem *pop()
 		{
@@ -340,6 +380,10 @@ private:
 		{
 			return curSize;
 		}
+		/**
+		 * @brief
+		 * 按照cost由大到小排序
+		 */
 		void sortByCost()
 		{
 			if(curSize > 1)
@@ -357,13 +401,13 @@ private:
 			delete []arr;
 		}
 	private:
-		StackItem **arr;
-		int maxSize;
-		int curSize;
+		StackItem **arr;//pq这个优先队列是和arr一起维护的
+		int maxSize;//StackItem指针的数目，或者说arr这个指针数组里StackItem指针的数目
+		int curSize;//保存arr的大小
 
-		typedef pair<double,int> P;
-		priority_queue<P, vector<P>, greater<P> > pq;
-		map<string,int> transIndex;
+		typedef pair<double,int> P;//第一个是cost，第二个是index
+		priority_queue<P, vector<P>, greater<P> > pq;//由小到大出队列，是一个小根堆
+		map<string,int> transIndex;//存储生成某个curTrans时Stack的curSize
 	};
 };
 

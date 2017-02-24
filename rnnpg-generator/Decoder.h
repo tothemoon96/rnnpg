@@ -91,6 +91,11 @@ public:
 		for(int i = 0; i < FEATURE_SIZE; i ++)
 			cost += featVals[i];
 	}
+	/**
+	 * @brief
+	 * 将每种模型生成的对数概率加权平均，得出cost
+	 * @param featWeights
+	 */
 	void updateCost(double *featWeights)
 	{
 		cost = 0;
@@ -132,6 +137,7 @@ public:
 	// 3. P(Fi|Si) phrase prob; 4. P(Fi|Si) lexical prob;
 	// 5. P(pos|ch) : the probability of a char 'ch' appearing at the position 'pos'
 	// 6. KN3 Language Model feature
+	// 这里的inverted和我注释里的反向有一些不同
 	enum FSIZE{FEATURE_SIZE = 7};
 	double featVals[FEATURE_SIZE];
 };
@@ -219,11 +225,19 @@ public:
 	{
 		return curSize;
 	}
+	/**
+	 * @brief
+	 * 将StackItem按照加权平均的cost由大到小进行排序
+	 */
 	void sortByCost()
 	{
 		if(curSize > 1)
 			sort(arr, arr + curSize, StackItem::stack_item_cmp);
 	}
+	/**
+	 * @brief
+	 * 将StackItem按照RNNPG的生成概率由大到小进行排序
+	 */
 	void rerankByRNNPG()
 	{
 		if(curSize > 1)
@@ -306,6 +320,14 @@ private:
 	int disableRNN;
 
 	enum SLEN{MAX_SEN_LEN = 8};
+	//contextHiddenNeu的数据结构
+	//|--------H*u_i^j(hiddenSize)--------|
+	//|0								  |
+	//|1								  |
+	//|2								  |
+	//|...								  |
+	//|6								  |
+	//|7								  |
 	neuron *contextHiddenNeu[MAX_SEN_LEN];
 
 	enum FSIZE{FEATURE_SIZE = 7};
@@ -342,11 +364,24 @@ private:
 	double getLMLogProb(string curTrans, vector<string> &curWords);
 	double getLMLogProb(string curTrans, vector<string> &curWords, vector<double> &probs);
 
+	/**
+	 * @brief
+	 * 检查把word拼接到trans的时候时，trans里和word里或者word内部是否会出现N+1个或者N+1个以上重复的字,若存在，则返回true，不存在，则返回false
+	 * 举例如下:
+	 * trans:＂芳　草＂　word:＂凄 凄＂ N:2 return:false
+	 * trans:＂天　若　有　情＂ word:＂天 亦 老＂ N:2 return:false
+	 * trans:＂凄 凄＂ word:"园 中 草" N:1 return:false
+	 * 换而言之，不会检查trans内部的重复
+	 * @param trans 已经生成的序列
+	 * @param word 备选短语
+	 * @param N
+	 * @return bool
+	 */
 	bool repeatGT(const string &trans, const string &word, int N)
 	{
 		vector<string> twords, words;
-		split(trans, " ", twords);
-		split(word, " ", words);
+		split(trans, " ", twords);//trans
+		split(word, " ", words);//word
 		int begin = twords.size();
 		twords.reserve(twords.size() + words.size());
 		twords.insert(twords.end(), words.begin(), words.end());
@@ -400,6 +435,12 @@ private:
 		return false;
 	}
 
+	/**
+	 * @brief
+	 * 将prevSents中的每句话切分成每个字存储在prevWords之中，每个字不重复
+	 * @param prevSents
+	 * @param prevWords
+	 */
 	void loadPreviousWords(vector<string> &prevSents, set<string> &prevWords)
 	{
 		prevWords.clear();
@@ -413,6 +454,12 @@ private:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 计算一个phr里有多少个词
+	 * @param phr
+	 * @return int
+	 */
 	int getPhraseLen(const char*phr)
 	{
 		int cnt = 0;

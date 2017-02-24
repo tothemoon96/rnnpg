@@ -21,6 +21,12 @@ public:
 		inLinePos = pos;
 	}
 
+	/**
+	 * @brief
+	 * 检查p的位置是否和this的位置相邻，如果this和p的行号相同并且this和p相邻,则返回true
+	 * @param p
+	 * @return bool
+	 */
 	bool nextTo(const Pos &p)
 	{
 		int abs = inLinePos - p.inLinePos;
@@ -77,6 +83,12 @@ public:
 		return false;
 	}
 
+	/**
+	 * @brief
+	 * 只从vector<Pos>中最大的行号大于等于fromLineNo开始考虑
+	 * @param fromLineNo
+	 * @return bool
+	 */
 	bool constainsDiscRep(int fromLineNo)
 	{
 		ciIter iter;
@@ -120,7 +132,7 @@ public:
 		return cnt > num;
 	}
 private:
-	map<string, vector<Pos> > charsInfo;
+	map<string, vector<Pos> > charsInfo;//存储一个字string和这个字出现的所有的位置vector<Pos>
 	typedef map<string, vector<Pos> >::iterator ciIter;
 };
 
@@ -162,7 +174,7 @@ public:
 	 * 2 - 0b10		dis-continuous repetition. e.g. ABCAD
 	 * 4 - 0b100	repeat more than 2 times. e.g. AABAC
 	 * 8 - 0b1000	greater than or equals to 2 repetitions. e.g. ABBCA
-	 * @param sent
+	 * @param sentstr 存放一句诗的字符串，如"游 春 车 马 客"
 	 * @return
 	 */
 	int containsRep(string sentstr)
@@ -177,6 +189,7 @@ public:
 			charsInfo.add(ch, lineNo, i);
 		}
 		int ret = 0;
+		//下面都只考虑同一行的诗
 		if(charsInfo.containsDiezi(lineNo))
 			ret = ret | DZ_REP;
 		if(charsInfo.constainsDiscRep(lineNo))
@@ -209,8 +222,10 @@ public:
 				return false;
 			CharsInfo charsInfo;
 			charsInfo.addPoem(poem);
+			//最大的一行>=第三行，也就是说第一行第二行是可以的，AABAC不行
 			if(charsInfo.repeatGT(2, 2))
 				return false;
+			//最大的一行>=第三行，也就是说第一行第二行是可以的，重复１次或者１词以上都不行
 			if(charsInfo.repetitionsGT(2, 0))
 				return false;
 

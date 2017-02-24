@@ -185,6 +185,13 @@ int Decoder::decode(const char* infile, const char* outfile, int stackSize, int 
 	return 0;
 }
 
+/**
+ * @brief
+ * 把first和second对应的每个词拆开成对应的字，在正向查询表中,计算\sum_i log(P(second_i|first_i))
+ * @param first
+ * @param second
+ * @return double
+ */
 double Decoder::getInvertedLexLogProb(const char *first, const char *second)
 {
 	vector<string> fwords, swords;
@@ -202,6 +209,13 @@ double Decoder::getInvertedLexLogProb(const char *first, const char *second)
 	return logProb;
 }
 
+/**
+ * @brief
+ * 把first和second对应的每个词拆开成对应的字，在反向查询表中，计算\sum_i log(P(first_i|second_i))
+ * @param first
+ * @param second
+ * @return double
+ */
 double Decoder::getLexLogProb(const char *first, const char *second)
 {
 	vector<string> fwords, swords;
@@ -538,6 +552,16 @@ int Decoder::decodeTransTable(vector<string> &prevSents, int stackSize, int K, v
 	return 0;
 }
 
+/**
+ * @brief
+ * 使用prevSents来生成下一句诗，施加了一些韵律的约束
+ * @param prevSents 存放之前生成出的诗句
+ * @param stackSize 临时存放栈的大小
+ * @param K 选择生成概率最大的K个句子
+ * @param tonalPatternIndex 整首诗服从的韵律，在TonalPattern.h文件中取值
+ * @param topSents 存放生成概率最大的K个句子的相关信息
+ * @return int
+ */
 int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int K, int tonalPatternIndex, vector<string> &topSents)
 {
 	if(!useToneRhythm)
@@ -550,10 +574,12 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 	split(prevSents[0], " ", words);
 	int senLen = words.size();
 
+	//得到当前要生成的这句诗的韵律
 	SenTP sentp = tp.getSenTP(senLen, tonalPatternIndex, prevSents.size());
 
 	int maxNGram = transTable->getMaxNGram();
 
+	//contextHiddenNeu是一个上下文向量,对应于H*u_i^j
 	rnnpg->getContextHiddenNeu(prevSents, contextHiddenNeu);
 
 	int i, j, k, t;
@@ -563,47 +589,54 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 		stacks[i] = new Stack(stackSize, hiddenSize);
 	stacks[senLen] = new Stack(K > stackSize ? K : stackSize, hiddenSize);
 
-	if(rnnpg->getFlushOption() == 2)
+	//如果刷新设置是EVERY_POEM，获得上一次计算的r_j
+	if(rnnpg->getFlushOption() == 2)//EVERY_POEM
 		rnnpg->getHiddenNeuron(newHiddenNeu);
 
 	StackItem *sitem = NULL;
 	sitem = new StackItem(hiddenSize);
 	sitem->posInSent = 0;
 	sitem->curTrans = sitem->word = "</s>";
-	if(rnnpg->getFlushOption() == 2)
+	if(rnnpg->getFlushOption() == 2)//EVERY_POEM
 		sitem->renewHiddenNeu(newHiddenNeu);
 	stacks[0]->push(sitem);
 
 	// try to consider previous generated words, no repeatition is allowed
-	set<string> prevWords;
+	set<string> prevWords;//注意，它是一个set
 	loadPreviousWords(prevSents, prevWords);
 
 	// now try to consider the previous sentence of the generated sentence
 	// try to build a translation table
-	vector<string> lwords;
+	vector<string> lwords;//存储的是prevSents里最后一句话的每个字
 	split(prevSents[prevSents.size() - 1], " ", lwords);
 
 	vector<pair<char*,double> > trans;
+	//对一句诗里每个字的位置
 	for(i = 0; i < senLen; i ++)
 	{
 		// Stack *nxStack = stacks[i+1];
 		Stack *nxStack = NULL;
+		//对Stack中的每一个StackItem
 		for(j = 0; j < stacks[i]->size(); j ++)
 		{
 			StackItem *curItem = stacks[i]->get(j);
 			string first = "";
 			vector<string> curWords;
+			//对要考虑的ngram中的每一个
 			for(k = 0; k < maxNGram && i + k < senLen; k ++)
 			{
-				if(k != 0) first.append(" "); first.append(lwords[i+k]);
+				if(k != 0) first.append(" ");
+				first.append(lwords[i+k]);
 
+				//根据first找到了一些生成过程中可用的候选词
 				transTable->getAllTrans(first.c_str(), trans);
 
 				// check tonal pattern constraints
+				//　对候选词中的每一个
 				for(t = 0; t < (int)trans.size(); t ++)
 				{
 					string second = trans[t].first;
-					split(trans[t].first, " ", curWords);
+					split(trans[t].first, " ", curWords);//curWords保存了词分隔出来的每一个字
 
 //					// same words in current sentence but no next to each other
 //					if(badRepeat(curItem->curTrans, second))
@@ -613,6 +646,7 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 //					if(containUsedWords(prevWords, second))
 //						continue;
 
+					//结合上面的循环，在这里的意思是，如果生成的一个存在重复的三个字，那个这个生成结果是不可取的，检查下一个备选短语
 					if(repeatGT(curItem->curTrans, second, 2))
 						continue;
 
@@ -634,13 +668,14 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 							tonalPattern = tonalPattern | base;
 						}
 					}
-
+					//检查使用这个候选词生成的诗的韵律是否正确
 					if(!sentp.isValidPattern(tonalPattern, validPos))
 						continue;
 					// check tonal pattern done
 
 					// check rhyming constraints
-					int transLen = getPhraseLen(curItem->curTrans.c_str()) - 1;		// be careful the </s>
+					int transLen = getPhraseLen(curItem->curTrans.c_str()) - 1;		// be careful the </s>，去掉开头的</s>
+					//正在处理第三句诗并且当前生成过程刚好能够生成完整的第三句诗，看最后一个字能不能从平水韵中搜索出来
 					if(transLen + curWords.size() == senLen && prevSents.size() == 1)
 					{
 						string cLastCh = curWords[curWords.size()-1];
@@ -648,8 +683,10 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 						if(!tr.getRhythm(cLastCh, cch))
 							continue;
 					}
+					//正在处理第四句诗并且当前生成过程刚好能够生成完整的第四句诗
 					if(transLen + curWords.size() == senLen && prevSents.size() == 3)
 					{
+						//看第二句的最后一个字能不能从平水韵中搜索出来
 						string secSen = prevSents[1];
 						vector<string> secChars;
 						split(secSen, " ", secChars);
@@ -658,13 +695,16 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 						if(!tr.getRhythm(lastCh, lch))
 							continue;
 
+						//看第四句的最后一个字能不能从平水韵中搜索出来
 						string cLastCh = curWords[curWords.size()-1];
 						AncChar cch;
 						if(!tr.getRhythm(cLastCh, cch))
 							continue;
 
+						//第二句的最后一个字不能和第四句的最后一个字相同
 						if(lastCh == cLastCh)
 							continue;
+						//第二句的最后一个字的韵律能必须和第四句的最后一个字的韵律相同
 						if(!lch.isSameRhythm(cch))
 							continue;
 //						cout << lch.toString() << " -- " << cch.toString() << endl;
@@ -675,13 +715,15 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 					// check rhyming constraints done
 
 
-					// update feature weights
+					// update feature weights,使用语言模型计算生成的概率
 					double rnnLogProb = 0;
 					if(interpolateWeight == 0)
+						//只使用RNNPG计算curWords的生成概率
 						rnnLogProb = rnnpg->computeNetContext(curItem->word.c_str(), curItem->posInSent, curWords, curItem->hiddenNeu,
 								contextHiddenNeu, newHiddenNeu);
 					else
 					{
+						//使用RNNPG和KENLM计算curWords的生成概率
 						assert(kenlm != NULL);
 						vector<double> knProbs;
 						getLMLogProb(curItem->curTrans, curWords, knProbs);
@@ -698,18 +740,21 @@ int Decoder::decodeWithConstraits(vector<string> &prevSents, int stackSize, int 
 
 					if(disableRNN == 0)
 						nxItem->featVals[0] = curItem->featVals[0] + rnnLogProb;
-					if(channelOption & 1)
+					if(channelOption & 1)//0b01
 					{
 						double invertedPhraseProb = trans[t].second;
-						double invertedPhraseLogProb = log(invertedPhraseProb);
+						double invertedPhraseLogProb = log(invertedPhraseProb);//使用正向查询表，将trans[t].first作为一个整体，计算 log(P(second|first))
+						//使用正向查询表，将trans[t].first拆分成一个个字，计算\sum_i log(P(second_i|first_i))
 						double invertedLexLogProb = getInvertedLexLogProb(first.c_str(), trans[t].first);
 						nxItem->featVals[1] = curItem->featVals[1] + invertedPhraseLogProb;
 						nxItem->featVals[2] = curItem->featVals[2] + invertedLexLogProb;
 					}
-					if(channelOption & 2)
+					if(channelOption & 2)//0b10
 					{
+						//在反向查询表中计算log(P(first|second))
 						double phraseProb = transTable->getProbInverted(trans[t].first, first.c_str());
 						double phraseLogProb = log(phraseProb);
+						//使用反向查询表，将trans[t].first拆分成一个个字，计算\sum_i log(P(first_i|second_i))
 						double lexLogProb = getLexLogProb(first.c_str(), trans[t].first);
 						nxItem->featVals[3] = curItem->featVals[3] + phraseLogProb;
 						nxItem->featVals[4] = curItem->featVals[4] + lexLogProb;

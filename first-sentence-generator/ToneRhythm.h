@@ -55,10 +55,24 @@ public:
 	}
 
 private:
+	//ancCharDicts的存储结构
+	//vector:
+	//       0(ShangPing)
+	//      ...
+	//       4(RuSheng)->map:string,vector<AncChar>
+	//                             吃,vector:
+	//										0->吃,0,五,物
+	//										1->吃,0,十二,锡
 	vector<map<string, vector<AncChar> > > ancCharDicts;
 	static const char * const psyFiles[];
 	static const int FILE_COUNT;
 
+	/**
+	 * @brief
+	 * 根据tonestr返回它在tone_strs数组里的位置
+	 * @param tonestr 查询字符串
+	 * @return int 位置
+	 */
 	int getToneIndex(string tonestr)
 	{
 		for(int i = 0; i < 5; i ++)

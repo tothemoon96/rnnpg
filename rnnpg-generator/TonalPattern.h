@@ -179,6 +179,14 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * 获得第tpIndex韵律格式下第senIndex句诗的韵律
+	 * @param wordsPerSen 一句诗的长度
+	 * @param tpIndex 编号0-3
+	 * @param senIndex 编号0-3
+	 * @return SenTP 存储韵律的对象
+	 */
 	SenTP getSenTP(int wordsPerSen, int tpIndex, int senIndex)
 	{
 		vector<PoemTP> &quatps = wordsPerSen == 5 ? qua5tps : qua7tps;
